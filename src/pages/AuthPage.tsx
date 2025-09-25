@@ -57,17 +57,29 @@ export const AuthPage: React.FC = () => {
         ? { email: 'staff@parkmeter.com', password: 'demo123' }
         : { email: 'user@parkmeter.com', password: 'demo123' };
 
-      const { error } = await signIn(demoCredentials.email, demoCredentials.password);
-      if (error) {
-        // If demo account doesn't exist, create it
+      // Try to sign in first
+      let { error } = await signIn(demoCredentials.email, demoCredentials.password);
+      
+      if (error && !error.message.includes('Supabase')) {
+        // If login fails (account doesn't exist), create the demo account
         const { error: signUpError } = await signUp(demoCredentials.email, demoCredentials.password, role);
         if (!signUpError) {
-          await signIn(demoCredentials.email, demoCredentials.password);
+          // After successful signup, sign in
+          const { error: signInError } = await signIn(demoCredentials.email, demoCredentials.password);
+          if (signInError && !signInError.message.includes('Supabase')) {
+            throw signInError;
+          }
+        } else if (!signUpError.message.includes('Supabase')) {
+          throw signUpError;
         }
+      } else if (error && error.message.includes('Supabase')) {
+        // If Supabase is not configured, navigate anyway for demo purposes
+        console.log('Supabase not configured, navigating to demo dashboard');
       }
+      
       navigate(isStaff ? '/staff/dashboard' : '/user/dashboard');
     } catch (error: any) {
-      setError('Demo login failed. Please try again.');
+      setError(`Demo login failed: ${error.message}`);
     } finally {
       setDemoLoading(false);
     }
