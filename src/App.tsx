@@ -1,6 +1,7 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
+import { ThemeProvider } from './contexts/ThemeContext';
 import { ProtectedRoute } from './components/ProtectedRoute';
 
 // Pages
@@ -9,44 +10,57 @@ import { AccessTypePage } from './pages/AccessTypePage';
 import { AuthPage } from './pages/AuthPage';
 import { StaffDashboard } from './pages/staff/StaffDashboard';
 import { UserDashboard } from './pages/user/UserDashboard';
+import { SettingsPage } from './pages/SettingsPage';
 
 function App() {
   return (
-    <AuthProvider>
-      <Router>
-        <div className="min-h-screen bg-gray-50">
-          <Routes>
-            {/* Public Routes */}
-            <Route path="/" element={<LandingPage />} />
-            <Route path="/access-type" element={<AccessTypePage />} />
-            <Route path="/auth/:userType" element={<AuthPage />} />
+    <ThemeProvider>
+      <AuthProvider>
+        <Router>
+          <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors">
+            <Routes>
+              {/* Public Routes */}
+              <Route path="/" element={<LandingPage />} />
+              <Route path="/access-type" element={<AccessTypePage />} />
+              <Route path="/auth/:userType" element={<AuthPage />} />
 
-            {/* Protected Staff Routes */}
-            <Route
-              path="/staff/dashboard"
-              element={
-                <ProtectedRoute requiredRole="staff">
-                  <StaffDashboard />
-                </ProtectedRoute>
-              }
-            />
+              {/* Protected Staff Routes */}
+              <Route
+                path="/staff/dashboard"
+                element={
+                  <ProtectedRoute requiredRole="staff">
+                    <StaffDashboard />
+                  </ProtectedRoute>
+                }
+              />
 
-            {/* Protected User Routes */}
-            <Route
-              path="/user/dashboard"
-              element={
-                <ProtectedRoute requiredRole="user">
-                  <UserDashboard />
-                </ProtectedRoute>
-              }
-            />
+              {/* Protected User Routes */}
+              <Route
+                path="/user/dashboard"
+                element={
+                  <ProtectedRoute requiredRole="user">
+                    <UserDashboard />
+                  </ProtectedRoute>
+                }
+              />
 
-            {/* Catch all redirect */}
-            <Route path="*" element={<Navigate to="/" replace />} />
-          </Routes>
-        </div>
-      </Router>
-    </AuthProvider>
+              {/* Protected Settings Route */}
+              <Route
+                path="/settings"
+                element={
+                  <ProtectedRoute>
+                    <SettingsPage />
+                  </ProtectedRoute>
+                }
+              />
+
+              {/* Catch all redirect */}
+              <Route path="*" element={<Navigate to="/" replace />} />
+            </Routes>
+          </div>
+        </Router>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
 
