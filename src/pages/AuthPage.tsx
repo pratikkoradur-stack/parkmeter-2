@@ -91,7 +91,7 @@ export const AuthPage: React.FC = () => {
         {/* Back Button */}
         <button
           onClick={() => navigate('/access-type')}
-          className="flex items-center text-gray-600 hover:text-gray-900 mb-6 transition-colors"
+          className="flex items-center text-gray-600 hover:text-gray-900 mb-6 transition-colors cursor-pointer"
         >
           <ChevronLeft size={20} className="mr-2" />
           Back to Access Selection
@@ -185,7 +185,7 @@ export const AuthPage: React.FC = () => {
                   setIsLogin(!isLogin);
                   setError('');
                 }}
-                className="text-sm text-gray-600 hover:text-gray-900 transition-colors"
+                className="text-sm text-gray-600 hover:text-gray-900 transition-colors cursor-pointer"
               >
                 {isLogin ? "Don't have an account? Sign up" : "Already have an account? Sign in"}
               </button>
