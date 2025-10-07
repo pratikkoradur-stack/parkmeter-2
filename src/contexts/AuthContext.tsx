@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { User as SupabaseUser } from '@supabase/supabase-js';
-import { supabase } from '../lib/supabase';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { User } from '../types';
 
 interface AuthContextType {
@@ -74,6 +74,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const signUp = async (email: string, password: string, role: 'staff' | 'user') => {
     try {
+      if (!isSupabaseConfigured()) {
+        const mockUser: User = {
+          id: `demo-${role}-${Date.now()}`,
+          email,
+          role,
+          created_at: new Date().toISOString()
+        };
+        setUser(mockUser);
+        return { data: { user: mockUser }, error: null };
+      }
+
       const { data, error } = await supabase.auth.signUp({
         email,
         password,
@@ -83,43 +94,25 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       });
 
       if (!error && data.user) {
-        // Create user profile
         await supabase.from('user_profiles').insert({
           user_id: data.user.id,
           full_name: '',
           member_since: new Date().toISOString()
         });
-        
-        // Set mock user for demo purposes when Supabase is not configured
-        if (supabaseUrl === 'https://placeholder.supabase.co') {
-          const mockUser: User = {
-            id: `demo-${role}-${Date.now()}`,
-            email,
-            role,
-            created_at: new Date().toISOString()
-          };
-          setUser(mockUser);
-        }
       }
 
       return { data, error };
     } catch (err: any) {
-      return { 
-        data: null, 
-        error: { message: 'Please connect to Supabase first. Click the "Connect to Supabase" button in the top right.' }
+      return {
+        data: null,
+        error: { message: err.message }
       };
     }
   };
 
   const signIn = async (email: string, password: string) => {
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password
-      });
-      
-      // Set mock user for demo purposes when Supabase is not configured
-      if (supabaseUrl === 'https://placeholder.supabase.co') {
+      if (!isSupabaseConfigured()) {
         const role = email.includes('staff') ? 'staff' : 'user';
         const mockUser: User = {
           id: `demo-${role}-${Date.now()}`,
@@ -130,12 +123,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(mockUser);
         return { data: { user: mockUser }, error: null };
       }
-      
+
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password
+      });
+
       return { data, error };
     } catch (err: any) {
-      return { 
-        data: null, 
-        error: { message: 'Please connect to Supabase first. Click the "Connect to Supabase" button in the top right.' }
+      return {
+        data: null,
+        error: { message: err.message }
       };
     }
   };
