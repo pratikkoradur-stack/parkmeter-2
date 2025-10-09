@@ -45,7 +45,7 @@ export const StaffDashboard: React.FC = () => {
 
   const quickActions = [
     { icon: Plus, label: 'Add Vehicle', color: 'bg-blue-600 hover:bg-blue-700' },
-    { icon: Search, label: 'Scan Number Plate', color: 'bg-gray-600 hover:bg-gray-700' },
+    { icon: Search, label: 'Scan Number Plate', color: 'bg-green-500 hover:bg-green-600' },
     { icon: FileText, label: 'Generate Report', color: 'bg-purple-600 hover:bg-purple-700' },
     { icon: AlertTriangle, label: 'View Violations', color: 'bg-orange-600 hover:bg-orange-700' }
   ];
