@@ -12,7 +12,9 @@ import {
 } from 'lucide-react';
 
 export const UserDashboard: React.FC = () => {
+  const navigate = useNavigate();
   const [currentTime, setCurrentTime] = useState(new Date());
+  const [showVehicleModal, setShowVehicleModal] = useState(false);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -44,28 +46,32 @@ export const UserDashboard: React.FC = () => {
       title: 'Register Vehicle',
       description: 'Add a new vehicle to your account',
       color: 'bg-blue-50',
-      iconColor: 'text-blue-600'
+      iconColor: 'text-blue-600',
+      onClick: () => setShowVehicleModal(true)
     },
     {
       icon: CreditCard,
       title: 'Payment History',
       description: 'View your payment history and receipts',
       color: 'bg-cyan-50',
-      iconColor: 'text-cyan-600'
+      iconColor: 'text-cyan-600',
+      onClick: () => alert('Payment history feature coming soon!')
     },
     {
       icon: Clock,
       title: 'Parking History',
       description: 'View your parking session history',
       color: 'bg-green-50',
-      iconColor: 'text-green-600'
+      iconColor: 'text-green-600',
+      onClick: () => alert('Parking history feature coming soon!')
     },
     {
       icon: Bell,
       title: 'Notifications',
       description: 'Manage your account notifications',
       color: 'bg-orange-50',
-      iconColor: 'text-orange-600'
+      iconColor: 'text-orange-600',
+      onClick: () => alert('Notifications feature coming soon!')
     }
   ];
 
@@ -142,7 +148,7 @@ export const UserDashboard: React.FC = () => {
           <h2 className="text-xl font-semibold text-gray-900 mb-6">Quick Actions</h2>
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
             {quickActions.map((action, index) => (
-              <Card key={index} className="hover:shadow-lg transition-shadow cursor-pointer">
+              <Card key={index} onClick={action.onClick} className="hover:shadow-lg transition-shadow cursor-pointer">
                 <CardContent className="p-6 text-center">
                   <div className={`w-16 h-16 rounded-2xl ${action.color} flex items-center justify-center mx-auto mb-4`}>
                     <action.icon className={`${action.iconColor}`} size={28} />
@@ -179,13 +185,21 @@ export const UserDashboard: React.FC = () => {
               <p className="text-gray-500 mb-6">
                 Add your first vehicle to start using the parking system
               </p>
-              <Button variant="primary" icon={Car}>
+              <Button variant="primary" icon={Car} onClick={() => setShowVehicleModal(true)}>
                 Register Your First Vehicle
               </Button>
             </CardContent>
           </Card>
         </div>
       </div>
+
+      <VehicleRegistrationModal
+        isOpen={showVehicleModal}
+        onClose={() => setShowVehicleModal(false)}
+        onSuccess={() => {
+          alert('Vehicle registered successfully!');
+        }}
+      />
     </div>
   );
 };
