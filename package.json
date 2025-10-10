@@ -34,5 +34,17 @@
     "typescript": "^5.5.3",
     "typescript-eslint": "^8.3.0",
     "vite": "^5.4.2"
+  },
+  "scripts": {
+    "start": "node server.js",
+    "test": "jest --verbose --forceExit",
+    "build": "npm run test && echo 'Backend build complete'",
+    "dev": "nodemon server.js"
+  },
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "test": "react-scripts test --watchAll=false --coverage",
+    "eject": "react-scripts eject"
   }
 }
