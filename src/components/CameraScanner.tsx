@@ -110,22 +110,36 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({ isOpen, onClose, o
       }
 
       setBusyMessage('Initializing OCR worker...');
-  const worker = createWorker({ logger: () => {} });
+      let worker: any = createWorker({ logger: () => {} });
+      // some builds return a Promise from createWorker
+      if (worker && typeof worker.then === 'function') {
+        worker = await worker;
+      }
+
+      if (!worker || typeof worker.load !== 'function') {
+        // Dump module shape for debugging
+        console.error('createWorker result:', worker, 'module:', mod);
+        throw new Error('Tesseract worker API not available (worker.load missing)');
+      }
+
       try {
         await worker.load();
         await worker.loadLanguage('eng');
         await worker.initialize('eng');
-        await worker.setParameters({ tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-' });
+        if (typeof worker.setParameters === 'function') {
+          await worker.setParameters({ tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-' });
+        }
         setBusyMessage('Running OCR...');
         const { data } = await worker.recognize(dataUrl);
         const text = (data?.text || '').trim();
-        await worker.terminate();
+        if (typeof worker.terminate === 'function') await worker.terminate();
         setBusyMessage(null);
         const plate = extractPlate(text);
         onResult?.({ raw: text, plate });
       } catch (wErr: any) {
-        try { if (worker.terminate) await worker.terminate(); } catch (_) {}
+        try { if (worker && typeof worker.terminate === 'function') await worker.terminate(); } catch (_) {}
         const msg = wErr?.message || String(wErr);
+        console.error('Tesseract worker runtime error:', wErr);
         setError('OCR worker error: ' + msg);
       }
     } catch (err: any) {
