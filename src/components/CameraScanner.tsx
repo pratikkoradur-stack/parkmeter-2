@@ -110,7 +110,7 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({ isOpen, onClose, o
       }
 
       setBusyMessage('Initializing OCR worker...');
-      const worker = createWorker({ logger: m => { /* console.debug(m) */ } });
+  const worker = createWorker({ logger: () => {} });
       try {
         await worker.load();
         await worker.loadLanguage('eng');
