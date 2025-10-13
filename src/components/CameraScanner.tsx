@@ -99,39 +99,53 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({ isOpen, onClose, o
 
       // Use a Tesseract worker (runs off main thread) for better responsiveness
       const mod: any = await import('tesseract.js');
-      const { createWorker } = mod;
-      const worker = createWorker({ logger: () => {} });
-      await worker.load();
-      await worker.loadLanguage('eng');
-      await worker.initialize('eng');
-      // whitelist typical plate chars (letters, digits and dash)
-      await worker.setParameters({ tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-' });
+      // prefer the exported createWorker function (named export or default.createWorker)
+      const createWorkerFn = mod.createWorker ?? mod.default?.createWorker;
+      if (typeof createWorkerFn !== 'function') {
+        throw new Error('Tesseract createWorker not available');
+      }
 
-      const { data: { text } } = await worker.recognize(dataUrl);
-      await worker.terminate();
+      const worker = createWorkerFn({ logger: () => {} });
+      try {
+        if (worker.load) await worker.load();
+        if (worker.loadLanguage) await worker.loadLanguage('eng');
+        if (worker.initialize) await worker.initialize('eng');
+        // whitelist typical plate chars (letters, digits and dash)
+        if (worker.setParameters) await worker.setParameters({ tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-' });
 
-      // plate extraction heuristics
-      const extractPlate = (raw: string) => {
-        if (!raw) return undefined;
-        const s = raw.toUpperCase().replace(/[|I\s:]/g, '');
+        const res = await worker.recognize(dataUrl);
+        const text = res?.data?.text ?? '';
+        await (worker.terminate ? worker.terminate() : Promise.resolve());
 
-        // India-like pattern: AA00AA0000 or variants
-        const indiaPattern = /([A-Z]{2}[0-9]{1,2}[A-Z]{1,2}[0-9]{1,4})/g;
-        const matchIndia = s.match(indiaPattern);
-        if (matchIndia && matchIndia.length) return matchIndia[0];
+        // plate extraction heuristics (below)
+        const extractPlate = (raw: string) => {
+          if (!raw) return undefined;
+          const s = raw.toUpperCase().replace(/[|I\s:]/g, '');
 
-        // Generic: longest alphanumeric token length >=4
-        const tokens = s.match(/[A-Z0-9\-]{4,}/g);
-        if (tokens && tokens.length) {
-          tokens.sort((a, b) => b.length - a.length);
-          return tokens[0];
-        }
+          // India-like pattern: AA00AA0000 or variants
+          const indiaPattern = /([A-Z]{2}[0-9]{1,2}[A-Z]{1,2}[0-9]{1,4})/g;
+          const matchIndia = s.match(indiaPattern);
+          if (matchIndia && matchIndia.length) return matchIndia[0];
 
-        return undefined;
-      };
+          // Generic: longest alphanumeric token length >=4
+          const tokens = s.match(/[A-Z0-9\-]{4,}/g);
+          if (tokens && tokens.length) {
+            tokens.sort((a, b) => b.length - a.length);
+            return tokens[0];
+          }
 
-      const plate = extractPlate(text);
-      onResult && onResult({ raw: text, plate });
+          return undefined;
+        };
+
+  const plate = extractPlate(text);
+  onResult?.({ raw: text, plate });
+  return;
+      } catch (workerErr) {
+        // attempt to terminate worker if possible
+        try { if (worker && worker.terminate) await worker.terminate(); } catch (_) {}
+        throw workerErr;
+      }
+
     } catch (err: any) {
       setError(err?.message || 'OCR failed');
     } finally {
@@ -153,10 +167,7 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({ isOpen, onClose, o
         <div className="flex flex-col md:flex-row gap-4 relative">
           <div className="flex-1 relative">
             <video ref={videoRef} className="w-full rounded bg-black" playsInline />
-            {/* overlay guide: transparent rectangle to help user align plate */}
-            <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-              <div className="w-3/5 h-1/5 border-2 border-white/80 rounded-md" style={{ boxShadow: '0 0 0 2000px rgba(0,0,0,0.25) inset' }} />
-            </div>
+            {/* removed overlay guide per UX request */}
           </div>
           <div className="w-48 flex-shrink-0">
             <canvas ref={canvasRef} className="w-full rounded border bg-white" />

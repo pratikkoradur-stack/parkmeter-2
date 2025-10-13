@@ -17,6 +17,7 @@ import {
   Layout,
   Bell
 } from 'lucide-react';
+import VehiclesListModal from '../../components/VehiclesListModal';
 
 export const StaffDashboard: React.FC = () => {
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -49,6 +50,7 @@ export const StaffDashboard: React.FC = () => {
   const [lastScanText, setLastScanText] = useState('');
   const [vehicleModalOpen, setVehicleModalOpen] = useState(false);
   const [initialPlate, setInitialPlate] = useState<string | undefined>(undefined);
+  const [showVehicles, setShowVehicles] = useState(false);
 
   const quickActions = [
     { icon: Plus, label: 'Add Vehicle', color: 'bg-blue-600 hover:bg-blue-700', onClick: () => { setInitialPlate(undefined); setVehicleModalOpen(true); } },
@@ -203,19 +205,21 @@ export const StaffDashboard: React.FC = () => {
         {/* Additional Tools */}
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
           {toolCards.map((tool, index) => (
-            <Card key={index} className="hover:shadow-lg transition-shadow cursor-pointer">
-              <CardContent className="p-6 text-center">
-                <div className={`w-12 h-12 rounded-lg ${tool.color} flex items-center justify-center mx-auto mb-4`}>
-                  <tool.icon className={`${tool.iconColor}`} size={24} />
-                </div>
-                <h3 className="font-semibold text-gray-900 mb-2">
-                  {tool.title}
-                </h3>
-                <p className="text-gray-600 text-sm">
-                  {tool.description}
-                </p>
-              </CardContent>
-            </Card>
+            <div key={index} onClick={() => { if (tool.title === 'Database Management') setShowVehicles(true); }} className="hover:shadow-lg transition-shadow cursor-pointer">
+              <Card>
+                <CardContent className="p-6 text-center">
+                  <div className={`w-12 h-12 rounded-lg ${tool.color} flex items-center justify-center mx-auto mb-4`}>
+                    <tool.icon className={`${tool.iconColor}`} size={24} />
+                  </div>
+                  <h3 className="font-semibold text-gray-900 mb-2">
+                    {tool.title}
+                  </h3>
+                  <p className="text-gray-600 text-sm">
+                    {tool.description}
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
           ))}
         </div>
       </div>
@@ -242,6 +246,7 @@ export const StaffDashboard: React.FC = () => {
           alert('Vehicle registered from scan!');
         }}
       />
+      <VehiclesListModal isOpen={showVehicles} onClose={() => setShowVehicles(false)} />
     </div>
   );
 };
