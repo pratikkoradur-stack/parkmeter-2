@@ -51,7 +51,7 @@ export const StaffDashboard: React.FC = () => {
   const [initialPlate, setInitialPlate] = useState<string | undefined>(undefined);
 
   const quickActions = [
-    { icon: Plus, label: 'Add Vehicle', color: 'bg-blue-600 hover:bg-blue-700', onClick: () => {} },
+    { icon: Plus, label: 'Add Vehicle', color: 'bg-blue-600 hover:bg-blue-700', onClick: () => { setInitialPlate(undefined); setVehicleModalOpen(true); } },
     { icon: Search, label: 'Scan Number Plate', color: 'bg-green-500 hover:bg-green-600', onClick: () => setScannerOpen(true) },
     { icon: FileText, label: 'Generate Report', color: 'bg-purple-600 hover:bg-purple-700', onClick: () => {} },
     { icon: AlertTriangle, label: 'View Violations', color: 'bg-orange-600 hover:bg-orange-700', onClick: () => {} }
