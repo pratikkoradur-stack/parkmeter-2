@@ -41,36 +41,87 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({ isOpen, onClose, o
     };
   }, [isOpen]);
 
+  // Preprocess the current video frame: crop center area, resize, grayscale, and simple threshold
+  const preprocessFrame = (video: HTMLVideoElement, targetCanvas: HTMLCanvasElement) => {
+    const vw = video.videoWidth || 1280;
+    const vh = video.videoHeight || 720;
+
+    // We'll crop to the central 60% area where plates are likely to appear
+    const cropW = Math.floor(vw * 0.6);
+    const cropH = Math.floor(vh * 0.25); // plates are wide and short
+    const sx = Math.floor((vw - cropW) / 2);
+    const sy = Math.floor((vh - cropH) / 2 + cropH * 0.4); // bias lower half
+
+    // Size the canvas to a reasonable OCR-friendly resolution
+    const outW = 1280;
+    const outH = Math.floor((cropH / cropW) * outW);
+    targetCanvas.width = outW;
+    targetCanvas.height = outH;
+
+    const ctx = targetCanvas.getContext('2d');
+    if (!ctx) return '';
+    // draw cropped frame scaled to output size
+    ctx.drawImage(video, sx, sy, cropW, cropH, 0, 0, outW, outH);
+
+    // simple grayscale + adaptive-ish threshold
+    const img = ctx.getImageData(0, 0, outW, outH);
+    const data = img.data;
+    // compute average luminance
+    let sum = 0;
+    for (let i = 0; i < data.length; i += 4) {
+      const l = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+      sum += l;
+    }
+    const avg = sum / (outW * outH);
+    const thresh = Math.max(100, Math.min(160, avg));
+
+    for (let i = 0; i < data.length; i += 4) {
+      const r = data[i], g = data[i + 1], b = data[i + 2];
+      const l = 0.299 * r + 0.587 * g + 0.114 * b;
+      const v = l > thresh ? 255 : 0;
+      data[i] = data[i + 1] = data[i + 2] = v;
+    }
+    ctx.putImageData(img, 0, 0);
+    return targetCanvas.toDataURL('image/png');
+  };
+
   const takeSnapshot = async () => {
     if (!videoRef.current || !canvasRef.current) return;
     setLoading(true);
-    const video = videoRef.current;
-    const canvas = canvasRef.current;
-    canvas.width = video.videoWidth || 1280;
-    canvas.height = video.videoHeight || 720;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-    const dataUrl = canvas.toDataURL('image/png');
+    setError(null);
 
     try {
-      // Dynamically import tesseract to avoid Vite pre-bundle resolution issues
-      const mod: any = await import('tesseract.js');
-      const Tesseract = mod?.default ?? mod;
-      const { data: { text } } = await Tesseract.recognize(dataUrl, 'eng', { logger: () => {} });
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
 
-      // Try to extract a vehicle plate using a couple of heuristics / regexes
+      // Preprocess and get data URL
+      const dataUrl = preprocessFrame(video, canvas);
+
+      // Use a Tesseract worker (runs off main thread) for better responsiveness
+      const mod: any = await import('tesseract.js');
+      const { createWorker } = mod;
+      const worker = createWorker({ logger: () => {} });
+      await worker.load();
+      await worker.loadLanguage('eng');
+      await worker.initialize('eng');
+      // whitelist typical plate chars (letters, digits and dash)
+      await worker.setParameters({ tessedit_char_whitelist: 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-' });
+
+      const { data: { text } } = await worker.recognize(dataUrl);
+      await worker.terminate();
+
+      // plate extraction heuristics
       const extractPlate = (raw: string) => {
         if (!raw) return undefined;
-        const s = raw.toUpperCase().replace(/[|I\s:]/g, ''); // remove some common OCR confusables and spaces
+        const s = raw.toUpperCase().replace(/[|I\s:]/g, '');
 
-        // Common India-like pattern: AA00AA0000 or AA-00-AA-0000 etc.
+        // India-like pattern: AA00AA0000 or variants
         const indiaPattern = /([A-Z]{2}[0-9]{1,2}[A-Z]{1,2}[0-9]{1,4})/g;
         const matchIndia = s.match(indiaPattern);
         if (matchIndia && matchIndia.length) return matchIndia[0];
 
-        // Generic fallback: find longest alphanumeric token of length >=4
-        const tokens = s.match(/[A-Z0-9]{4,}/g);
+        // Generic: longest alphanumeric token length >=4
+        const tokens = s.match(/[A-Z0-9\-]{4,}/g);
         if (tokens && tokens.length) {
           tokens.sort((a, b) => b.length - a.length);
           return tokens[0];
@@ -99,12 +150,16 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({ isOpen, onClose, o
             <button onClick={onClose} className="px-3 py-1 bg-gray-200 rounded">Close</button>
           </div>
         </div>
-        <div className="flex flex-col md:flex-row gap-4">
-          <div className="flex-1">
+        <div className="flex flex-col md:flex-row gap-4 relative">
+          <div className="flex-1 relative">
             <video ref={videoRef} className="w-full rounded bg-black" playsInline />
+            {/* overlay guide: transparent rectangle to help user align plate */}
+            <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
+              <div className="w-3/5 h-1/5 border-2 border-white/80 rounded-md" style={{ boxShadow: '0 0 0 2000px rgba(0,0,0,0.25) inset' }} />
+            </div>
           </div>
           <div className="w-48 flex-shrink-0">
-            <canvas ref={canvasRef} className="w-full rounded border" />
+            <canvas ref={canvasRef} className="w-full rounded border bg-white" />
             <div className="mt-2 space-y-2">
               <button onClick={takeSnapshot} disabled={loading} className="w-full bg-green-500 text-white px-3 py-2 rounded">
                 {loading ? 'Scanning...' : 'Capture & Scan'}
