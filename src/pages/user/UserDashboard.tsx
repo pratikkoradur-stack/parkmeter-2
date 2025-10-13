@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { VehicleRegistrationModal } from '../../components/VehicleRegistrationModal';
 import { Header } from '../../components/layout/Header';
 import { Card, CardContent } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
@@ -8,11 +9,11 @@ import {
   Clock, 
   Bell, 
   Calendar,
-  MapPin
+  
 } from 'lucide-react';
 
 export const UserDashboard: React.FC = () => {
-  const navigate = useNavigate();
+  // navigate not used here; removed to avoid unused var
   const [currentTime, setCurrentTime] = useState(new Date());
   const [showVehicleModal, setShowVehicleModal] = useState(false);
 
@@ -148,19 +149,21 @@ export const UserDashboard: React.FC = () => {
           <h2 className="text-xl font-semibold text-gray-900 mb-6">Quick Actions</h2>
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
             {quickActions.map((action, index) => (
-              <Card key={index} onClick={action.onClick} className="hover:shadow-lg transition-shadow cursor-pointer">
-                <CardContent className="p-6 text-center">
-                  <div className={`w-16 h-16 rounded-2xl ${action.color} flex items-center justify-center mx-auto mb-4`}>
-                    <action.icon className={`${action.iconColor}`} size={28} />
-                  </div>
-                  <h3 className="font-semibold text-gray-900 mb-2">
-                    {action.title}
-                  </h3>
-                  <p className="text-gray-600 text-sm">
-                    {action.description}
-                  </p>
-                </CardContent>
-              </Card>
+              <div key={index} onClick={action.onClick} className="hover:shadow-lg transition-shadow cursor-pointer">
+                <Card>
+                  <CardContent className="p-6 text-center">
+                    <div className={`w-16 h-16 rounded-2xl ${action.color} flex items-center justify-center mx-auto mb-4`}>
+                      <action.icon className={`${action.iconColor}`} size={28} />
+                    </div>
+                    <h3 className="font-semibold text-gray-900 mb-2">
+                      {action.title}
+                    </h3>
+                    <p className="text-gray-600 text-sm">
+                      {action.description}
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
             ))}
           </div>
         </div>

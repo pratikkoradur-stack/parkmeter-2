@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { CameraScanner } from '../../components/CameraScanner';
+import { VehicleRegistrationModal } from '../../components/VehicleRegistrationModal';
 import { Header } from '../../components/layout/Header';
 import { Card, CardContent } from '../../components/ui/Card';
 import { Button } from '../../components/ui/Button';
@@ -43,11 +45,16 @@ export const StaffDashboard: React.FC = () => {
     });
   };
 
+  const [scannerOpen, setScannerOpen] = useState(false);
+  const [lastScanText, setLastScanText] = useState('');
+  const [vehicleModalOpen, setVehicleModalOpen] = useState(false);
+  const [initialPlate, setInitialPlate] = useState<string | undefined>(undefined);
+
   const quickActions = [
-    { icon: Plus, label: 'Add Vehicle', color: 'bg-blue-600 hover:bg-blue-700' },
-    { icon: Search, label: 'Scan Number Plate', color: 'bg-green-500 hover:bg-green-600' },
-    { icon: FileText, label: 'Generate Report', color: 'bg-purple-600 hover:bg-purple-700' },
-    { icon: AlertTriangle, label: 'View Violations', color: 'bg-orange-600 hover:bg-orange-700' }
+    { icon: Plus, label: 'Add Vehicle', color: 'bg-blue-600 hover:bg-blue-700', onClick: () => {} },
+    { icon: Search, label: 'Scan Number Plate', color: 'bg-green-500 hover:bg-green-600', onClick: () => setScannerOpen(true) },
+    { icon: FileText, label: 'Generate Report', color: 'bg-purple-600 hover:bg-purple-700', onClick: () => {} },
+    { icon: AlertTriangle, label: 'View Violations', color: 'bg-orange-600 hover:bg-orange-700', onClick: () => {} }
   ];
 
   const managementCards = [
@@ -141,7 +148,17 @@ export const StaffDashboard: React.FC = () => {
             </CardContent>
           </Card>
         </div>
-
+        {/* Last Scan Result */}
+        {lastScanText && (
+          <div className="mb-6">
+            <Card>
+              <CardContent className="p-4">
+                <h3 className="font-semibold text-gray-900 mb-2">Last Scan Result</h3>
+                <pre className="text-sm text-gray-700 whitespace-pre-wrap">{lastScanText}</pre>
+              </CardContent>
+            </Card>
+          </div>
+        )}
         {/* Quick Actions */}
         <div className="mb-8">
           <h2 className="text-xl font-semibold text-gray-900 mb-4">Quick Actions</h2>
@@ -152,6 +169,7 @@ export const StaffDashboard: React.FC = () => {
                 size="lg"
                 icon={action.icon}
                 className={`${action.color} text-white justify-start p-4 h-auto`}
+                onClick={action.onClick}
               >
                 {action.label}
               </Button>
@@ -201,6 +219,29 @@ export const StaffDashboard: React.FC = () => {
           ))}
         </div>
       </div>
+      <CameraScanner
+        isOpen={scannerOpen}
+        onClose={() => setScannerOpen(false)}
+        onResult={({ raw, plate }) => {
+          setLastScanText(raw);
+          setScannerOpen(false);
+          if (plate) {
+            setInitialPlate(plate);
+            setVehicleModalOpen(true);
+          } else {
+            alert('Scanned text:\n' + raw + '\n\nCould not confidently extract a plate.');
+          }
+        }}
+      />
+
+      <VehicleRegistrationModal
+        isOpen={vehicleModalOpen}
+        onClose={() => setVehicleModalOpen(false)}
+        initialPlate={initialPlate}
+        onSuccess={() => {
+          alert('Vehicle registered from scan!');
+        }}
+      />
     </div>
   );
 };
