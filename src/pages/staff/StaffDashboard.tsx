@@ -48,6 +48,8 @@ export const StaffDashboard: React.FC = () => {
 
   const [scannerOpen, setScannerOpen] = useState(false);
   const [lastScanText, setLastScanText] = useState('');
+  const [lastParsedPlate, setLastParsedPlate] = useState<string | null>(null);
+  const [scanCount, setScanCount] = useState(0);
   const [vehicleModalOpen, setVehicleModalOpen] = useState(false);
   const [initialPlate, setInitialPlate] = useState<string | undefined>(undefined);
   const [showVehicles, setShowVehicles] = useState(false);
@@ -151,12 +153,21 @@ export const StaffDashboard: React.FC = () => {
           </Card>
         </div>
         {/* Last Scan Result */}
-        {lastScanText && (
+        {(lastScanText || lastParsedPlate !== null) && (
           <div className="mb-6">
             <Card>
               <CardContent className="p-4">
-                <h3 className="font-semibold text-gray-900 mb-2">Last Scan Result</h3>
-                <pre className="text-sm text-gray-700 whitespace-pre-wrap">{lastScanText}</pre>
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h3 className="font-semibold text-gray-900 mb-2">Last Scan Result</h3>
+                    <pre className="text-sm text-gray-700 whitespace-pre-wrap">{lastScanText}</pre>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-sm text-gray-500">Latest Parsed Plate</div>
+                    <div className="font-mono text-lg font-semibold text-blue-600">{lastParsedPlate ?? '—'}</div>
+                    <div className="text-sm text-gray-500 mt-2">Total scans: {scanCount}</div>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </div>
@@ -227,15 +238,18 @@ export const StaffDashboard: React.FC = () => {
         isOpen={scannerOpen}
         onClose={() => setScannerOpen(false)}
         onResult={({ raw, plate }) => {
-          setLastScanText(raw);
-          setScannerOpen(false);
-          if (plate) {
-            setInitialPlate(plate);
-            setVehicleModalOpen(true);
-          } else {
-            alert('Scanned text:\n' + raw + '\n\nCould not confidently extract a plate.');
-          }
-        }}
+            setLastScanText(raw);
+            setScannerOpen(false);
+            setScanCount(c => c + 1);
+            if (plate) {
+              setLastParsedPlate(plate);
+              setInitialPlate(plate);
+              setVehicleModalOpen(true);
+            } else {
+              setLastParsedPlate(null);
+              alert('Scanned text:\n' + raw + '\n\nCould not confidently extract a plate.');
+            }
+          }}
       />
 
       <VehicleRegistrationModal

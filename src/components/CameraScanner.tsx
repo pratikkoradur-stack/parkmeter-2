@@ -140,10 +140,13 @@ export const CameraScanner: React.FC<CameraScannerProps> = ({ isOpen, onClose, o
   const plate = extractPlate(text);
   onResult?.({ raw: text, plate });
   return;
-      } catch (workerErr) {
+      } catch (workerErr: any) {
         // attempt to terminate worker if possible
         try { if (worker && worker.terminate) await worker.terminate(); } catch (_) {}
-        throw workerErr;
+        const msg = workerErr?.message || String(workerErr) || 'Unknown OCR error';
+        console.error('Tesseract worker error:', workerErr);
+        setError('OCR error: ' + msg);
+        return;
       }
 
     } catch (err: any) {
