@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { isSupabaseConfigured, supabase } from '../lib/supabase';
+import { isMongoApiConfigured, fetchVehicles } from '../lib/mongo';
 
 type VehicleRecord = {
   id?: string;
@@ -21,7 +22,10 @@ export const VehiclesListModal: React.FC<{ isOpen: boolean; onClose: () => void 
   const load = async () => {
     setLoading(true);
     try {
-      if (isSupabaseConfigured()) {
+      if (isMongoApiConfigured()) {
+        const data = await fetchVehicles(search || undefined);
+        setVehicles(data || []);
+      } else if (isSupabaseConfigured()) {
         const { data, error } = await supabase.from('vehicles').select('*').order('created_at', { ascending: false });
         if (error) throw error;
         setVehicles(data as VehicleRecord[]);
