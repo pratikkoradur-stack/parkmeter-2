@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import SpiderClock from '../../components/ui/SpiderClock';
 import { VehicleRegistrationModal } from '../../components/VehicleRegistrationModal';
 import { Header } from '../../components/layout/Header';
 import { Card, CardContent } from '../../components/ui/Card';
@@ -72,15 +73,10 @@ export const UserDashboard: React.FC = () => {
             </div>
           </div>
 
-          {/* Current Time Card */}
+          {/* Spider Clock component */}
           <div className="col-span-1">
             <div className="p-0 bg-transparent shadow-none rounded-lg h-full flex flex-col">
-              <iframe
-                title="Spider Clock"
-                src="/spider-clock/index.html"
-                className="w-full h-64 border-0 rounded-lg"
-                style={{ overflow: 'hidden' }}
-              />
+              <SpiderClock />
             </div>
           </div>
         </div>
