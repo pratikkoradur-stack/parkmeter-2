@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spider Clock</title>
+    <!-- GSAP core -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<!-- Optional GSAP plugins -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/MotionPathPlugin.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="vline"></div>
+<div class="gsapWrapper">
+
+  <div id="wBody">
+    <div id="watch">
+			
+        <svg id="watchSVG" overflow="visible" version="1.1" viewBox="0 0 300 300" xmlns:xlink="http://www.w3.org/1999/xlink" >
+
+            <g transform="matrix(0.97,0.02,-0.02,0.97,19.19,-6.07)"><use class="cog cw t24" fill-opacity="0.4" href="#cog1" /></g>
+            <use class="cog ccw t12" href="#cog2" fill-opacity="0.4" />
+            <g transform="matrix(0.93,0,0,0.93,9.460262,5.75)"><use class="cog cw t24" fill-opacity="0.4" href="#cog1" transform="rotate(-51.810031,132.27636,-30.515465)" /></g>
+            <g transform="rotate(-3.7621103,160.78969,349.2265)"><use class="cog cw t20" fill-opacity="0.4" href="#cog5" /></g>
+
+            <g transform="rotate(-2.7463672,162.45282,88.573956)">
+                <use class="cog ccw t12" href="#cog2" fill-opacity="0.5" transform="rotate(-117.25759,103.54258,173.50156)" />
+            </g>
+            <g transform="rotate(-10.176195,143.10035,73.854981)"><use class="cog ccw t12" href="#cog2" fill-opacity="0.5" transform="rotate(-34.224386,-107.18833,39.101999)" /></g>
+
+            <use class="cog ccw t12" fill-opacity="0.08" href="#cog5" filter="url(#blur1)" transform="matrix(1.756136,-0.11547602,0.11547602,1.756136,-258.10202,-151.7933)" />
+            <use class="cog cw t24" fill-opacity="0.05" href="#cog1" filter="url(#blur2)" transform="matrix(2.2837863,0.04708838,-0.04708838,2.2837863,58.766756,-235.77904)" />
+            <use class="cog ccw t12" fill-opacity="0.03" href="#cog1" filter="url(#blur3)"  transform="matrix(4.1933711,0.08646126,-0.08646126,4.1933711,-272.22866,-548.76437)" />
+            
+            <use id="clockFace" fill="#FFFFFF" fill-opacity="0.15" stroke="none" href="#arabic" filter="url(#shadow)" />
+
+            <g id="spider" style="display:inline" transform="matrix(3.7795276,0,0,3.7795276,0,-3.2951691e-6)">
+                
+                <path id="hands-small" fill="#FFFFFF" stroke="none" filter="url(#shadow)" d="M 34.4,21.6 34,21.5 29.8,33.8 C 34,38.2 33.1,37 38.1,39.1 c -5.3,2.1 -4.5,2.4 -8.1,6.5 L 31.6,51.4 32,51.3 31.4,46.2 c 5,-5.9 9.3,-8.4 16.6,-0.1 l -0.6,5.2 0.4,0.1 1.6,-5.8 C 46.1,40.7 45.9,41.4 41.3,39.1 c 5.3,-1.5 4.8,-1.6 8.3,-5.4 L 45.7,21.5 45.3,21.6 48,33.3 c -5.6,5.3 -10.2,5.2 -16.4,0.2 z" />
+                <g id="hr">
+                    <circle fill="#FFFFFF" fill-opacity="0" stroke="none" cx="39.75" cy="39.14" r="56.37" />
+                    <path id="hand-hr" fill="#FFFFFF" stroke="none" filter="url(#shadow)" d="" />
+                </g>
+                <g id="min">
+                    <circle fill="#FFFFFF" fill-opacity="0" stroke="none" cx="39.75" cy="39.14" r="56.37" />
+                    <path id="hand-min" fill="#FFFFFF" stroke="none" filter="url(#shadow)" d="" />
+                </g>
+                <g id="sec">
+                    <circle fill="#FFFFFF" fill-opacity="0" stroke="none" cx="39.75" cy="39.14" r="56.37" />
+                    <path id="hand-sec" fill="#FFFFFF" stroke="none" filter="url(#shadow)" d="" />
+                </g>
+                
+                <path id="body" fill="#FFFFFF" stroke="none" filter="url(#shadow2)" d="m 38.3,32.5 c -0.8,0.4 -4.1,4.1 -1.3,8 -0.3,1.1 0,4.1 2.6,4.2 2.6,0.1 3.1,-3 2.6,-4.2 2.5,-3.5 0.1,-7.3 -0.9,-8 -1.2,-1 -1.7,-1.1 -3,0 z" />
+                <path id="face" fill="#FFFFFF" stroke="none" filter="url(#shadow2)" d="" />
+                <path id="hideShadow" fill="#FFFFFF" stroke="none" d="m 42,43.2 c -0.2,0.5 -1.2,1.6 -2.4,1.6 -1.1,0 -2,-1.1 -2.3,-1.7 -0.3,-0.5 1.1,-1.2 2.3,-1.2 1.1,0 2.6,0.7 2.4,1.2 z" />
+
+            </g>
+
+        </svg>
+
+    </div>
+  </div>
+
+</div>
+
+<svg width="0" width="0" role="none" xmlns="http://www.w3.org/2000/svg">
+    <defs>
+        <!-- filters and paths included in original file are retained in this distribution -->
+    </defs>
+    
+</svg>
+
+    <script src="./script.js"></script>
+</body>
+</html>

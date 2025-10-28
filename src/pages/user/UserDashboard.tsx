@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { VehicleRegistrationModal } from '../../components/VehicleRegistrationModal';
 import { Header } from '../../components/layout/Header';
 import { Card, CardContent } from '../../components/ui/Card';
@@ -13,33 +13,8 @@ import {
 } from 'lucide-react';
 
 export const UserDashboard: React.FC = () => {
-  // navigate not used here; removed to avoid unused var
-  const [currentTime, setCurrentTime] = useState(new Date());
+  // local state
   const [showVehicleModal, setShowVehicleModal] = useState(false);
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setCurrentTime(new Date());
-    }, 1000);
-    return () => clearInterval(timer);
-  }, []);
-
-  const formatTime = (date: Date) => {
-    return date.toLocaleTimeString('en-US', { 
-      hour12: true,
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit'
-    });
-  };
-
-  const formatDate = (date: Date) => {
-    return date.toLocaleDateString('en-US', { 
-      day: 'numeric',
-      month: 'short',
-      year: 'numeric'
-    });
-  };
 
   const quickActions = [
     {
@@ -98,17 +73,16 @@ export const UserDashboard: React.FC = () => {
           </div>
 
           {/* Current Time Card */}
-          <Card className="bg-gradient-to-br from-teal-50 to-teal-100">
-            <CardContent className="p-6 text-center">
-              <div className="text-sm text-gray-600 mb-1">Current Time (IST)</div>
-              <div className="text-2xl font-bold text-teal-600 mb-1">
-                {formatTime(currentTime)}
-              </div>
-              <div className="text-sm text-gray-500">
-                {formatDate(currentTime)}
-              </div>
-            </CardContent>
-          </Card>
+          <div className="col-span-1">
+            <div className="p-0 bg-transparent shadow-none rounded-lg h-full flex flex-col">
+              <iframe
+                title="Spider Clock"
+                src="/spider-clock/index.html"
+                className="w-full h-64 border-0 rounded-lg"
+                style={{ overflow: 'hidden' }}
+              />
+            </div>
+          </div>
         </div>
 
         {/* Stats Cards */}
