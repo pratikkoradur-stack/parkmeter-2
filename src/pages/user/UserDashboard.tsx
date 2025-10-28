@@ -1,5 +1,4 @@
-import React, { useState } from 'react';
-import SpiderClock from '../../components/ui/SpiderClock';
+import React, { useState, useEffect } from 'react';
 import { VehicleRegistrationModal } from '../../components/VehicleRegistrationModal';
 import { Header } from '../../components/layout/Header';
 import { Card, CardContent } from '../../components/ui/Card';
@@ -16,6 +15,16 @@ import {
 export const UserDashboard: React.FC = () => {
   // local state
   const [showVehicleModal, setShowVehicleModal] = useState(false);
+  const [currentTime, setCurrentTime] = useState<Date>(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const formatTime = (date: Date) => date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+  const formatDate = (date: Date) => date.toLocaleDateString();
+  const ampm = (date: Date) => (date.getHours() >= 12 ? 'PM' : 'AM');
 
   const quickActions = [
     {
@@ -73,10 +82,20 @@ export const UserDashboard: React.FC = () => {
             </div>
           </div>
 
-          {/* Spider Clock component */}
+          {/* Current time card */}
           <div className="col-span-1">
-            <div className="p-0 bg-transparent shadow-none rounded-lg h-full flex flex-col">
-              <SpiderClock />
+            <div className="p-6 bg-white dark:bg-slate-900 shadow rounded-lg h-full flex flex-col">
+              <div className="flex items-center justify-between mb-2">
+                <h3 className="text-sm font-medium text-slate-700 dark:text-slate-300">Current time</h3>
+                <div className="text-xs text-slate-400">Local</div>
+              </div>
+              <div className="flex items-center justify-between mt-auto">
+                <div>
+                  <div className="text-3xl font-bold text-slate-700 dark:text-slate-300">{formatTime(currentTime)}</div>
+                  <div className="text-xs text-slate-400">{formatDate(currentTime)}</div>
+                </div>
+                <div className="text-slate-400">{ampm(currentTime)}</div>
+              </div>
             </div>
           </div>
         </div>
