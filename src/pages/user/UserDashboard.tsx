@@ -82,19 +82,31 @@ export const UserDashboard: React.FC = () => {
             </div>
           </div>
 
-          {/* Current time card */}
+          {/* Current time card (styled) */}
           <div className="col-span-1">
-            <div className="p-6 bg-white dark:bg-slate-900 shadow rounded-lg h-full flex flex-col">
-              <div className="flex items-center justify-between mb-2">
-                <h3 className="text-sm font-medium text-slate-700 dark:text-slate-300">Current time</h3>
-                <div className="text-xs text-slate-400">Local</div>
+            <div className="p-4 bg-gradient-to-br from-indigo-600 to-blue-500 text-white shadow-lg rounded-lg h-full flex flex-col">
+              <div className="flex items-start justify-between mb-2">
+                <div className="flex items-center space-x-3">
+                  <div className="bg-white/10 p-2 rounded-md">
+                    <Clock size={20} className="text-white" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-semibold text-white/90">Current time</h3>
+                    <div className="text-xs text-white/70">Local</div>
+                  </div>
+                </div>
+                <div className="text-xs text-white/80">{Intl.DateTimeFormat().resolvedOptions().timeZone}</div>
               </div>
+
               <div className="flex items-center justify-between mt-auto">
                 <div>
-                  <div className="text-3xl font-bold text-slate-700 dark:text-slate-300">{formatTime(currentTime)}</div>
-                  <div className="text-xs text-slate-400">{formatDate(currentTime)}</div>
+                  <div className="text-4xl sm:text-5xl font-extrabold tracking-tight">{formatTime(currentTime)}</div>
+                  <div className="text-sm text-white/80 mt-1">{formatDate(currentTime)}</div>
                 </div>
-                <div className="text-slate-400">{ampm(currentTime)}</div>
+                <div className="text-sm text-white/80 ml-4 flex flex-col items-end">
+                  <div className="text-lg font-medium">{ampm(currentTime)}</div>
+                  <div className="text-xs text-white/70 mt-2">Updated live</div>
+                </div>
               </div>
             </div>
           </div>
