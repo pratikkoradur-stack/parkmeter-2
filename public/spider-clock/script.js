@@ -1,27 +1,58 @@
+
 let select = e => document.querySelector(e);
 let selectAll = e => document.querySelectorAll(e);
 
-const face01 = select("#face01").getAttribute("d"),
-face02 = select("#face01").getAttribute("d"),
+// Helper to safely get attribute 'd' from an element or return null
+const safeD = (selector, fallbackSelector) => {
+    const el = select(selector) || (fallbackSelector ? select(fallbackSelector) : null);
+    return el ? el.getAttribute('d') : null;
+};
 
-handSec01 = select("#handSec01").getAttribute("d"),
-handSec02 = select("#handSec02").getAttribute("d"),
-sec = select("#sec"),
+// Elements (fall back to existing ids if variants are missing)
+const face01_d = safeD('#face01', '#face');
+const face02_d = safeD('#face02', '#face') || face01_d;
 
-handMin01 = select("#handMin01").getAttribute("d"),
-handMin02 = select("#handMin02").getAttribute("d"),
-min = select("#min"),
+const handSec01_d = safeD('#handSec01', '#hand-sec');
+const handSec02_d = safeD('#handSec02', '#hand-sec') || handSec01_d;
+const sec = select('#sec') || select('#hand-sec');
 
-handHr01 = select("#handHr01").getAttribute("d"),
-handHr02 = select("#handHr02").getAttribute("d"),
-hr = select("#hr");
+const handMin01_d = safeD('#handMin01', '#hand-min');
+const handMin02_d = safeD('#handMin02', '#hand-min') || handMin01_d;
+const min = select('#min') || select('#hand-min');
 
-gsap.set("#face", { attr: { d: face01 } });
-gsap.set("#hand-sec", { attr: { d: handSec01 } });
-gsap.set("#hand-min", { attr: { d: handMin01 } });
-gsap.set("#hand-hr", { attr: { d: handHr01 } });
+const handHr01_d = safeD('#handHr01', '#hand-hr');
+const handHr02_d = safeD('#handHr02', '#hand-hr') || handHr01_d;
+const hr = select('#hr') || select('#hand-hr');
 
-window.onload = function() { startAnimation(); };
+// Apply initial attributes only if we have 'd' data
+if (face01_d) gsap.set('#face', { attr: { d: face01_d } });
+if (handSec01_d) gsap.set('#hand-sec', { attr: { d: handSec01_d } });
+if (handMin01_d) gsap.set('#hand-min', { attr: { d: handMin01_d } });
+if (handHr01_d) gsap.set('#hand-hr', { attr: { d: handHr01_d } });
+
+// Detect whether MorphSVGPlugin is available (paid plugin). If not, we'll skip morphing and use subtle transforms instead.
+const canMorph = typeof MorphSVGPlugin !== 'undefined' || (gsap && gsap.morphSVG);
+
+// Ensure GSAP is loaded and DOM is ready before starting
+document.addEventListener('DOMContentLoaded', () => {
+    if (typeof window.gsap === 'undefined') {
+        console.error('Spider Clock: GSAP is not loaded. Check that GSAP script is included.');
+        // still attempt to show wrapper
+        const wrapper = document.querySelector('.gsapWrapper');
+        if (wrapper) wrapper.style.visibility = 'visible';
+        return;
+    }
+
+    // ensure essential elements exist
+    if (!sec || !min || !hr) {
+        console.warn('Spider Clock: missing essential SVG elements (sec/min/hr). Aborting animation.');
+        const wrapper = document.querySelector('.gsapWrapper');
+        if (wrapper) wrapper.style.visibility = 'visible';
+        return;
+    }
+
+    startAnimation();
+});
 
 
 function startAnimation() {
@@ -59,25 +90,41 @@ function startAnimation() {
     } });
 
     
-    let tg0 = gsap.timeline( { repeat: -1, repeatDelay: 5, defaults: {duration: 0.5, ease: "power1.out" } } )
-    .to("#face", {
-        morphSVG: "#face02",
-        repeat: 4,
-        yoyo: true,
-        onComplete() {
+    let tg0;
+    if (canMorph) {
+        tg0 = gsap.timeline( { repeat: -1, repeatDelay: 5, defaults: {duration: 0.5, ease: "power1.out" } } )
+        .to("#face", {
+            morphSVG: "#face02",
+            repeat: 4,
+            yoyo: true,
+            onComplete() {
+                tg0.repeatDelay( gsap.utils.random(4, 8, 0.25) );
+            }
+        });
+    } else {
+        // Fallback: subtle scale pulse if morph isn't available
+        tg0 = gsap.timeline( { repeat: -1, repeatDelay: 5, defaults: {duration: 0.5, ease: "power1.out" } } )
+        .to("#face", { scale: 1.03, transformOrigin: "50% 50%", yoyo: true, repeat: 4, onComplete() {
             tg0.repeatDelay( gsap.utils.random(4, 8, 0.25) );
-        }
-    });
+        } });
+    }
 
     let tg1 = gsap.timeline( { repeat: -1, repeatDelay: 5, defaults: {duration: 1.5, ease: "bounce" } } )
     .delay(1)
     .call(() => {
         let rotation = parseFloat(gsap.getProperty(sec, "rotation").toFixed(1));
-        if( ( rotation > 30 && rotation < 150 ) || ( rotation > 210 && rotation < 330 )  )
+            if( ( rotation > 30 && rotation < 150 ) || ( rotation > 210 && rotation < 330 )  )
         {
-            gsap.timeline({ repeat: 0, defaults: {duration: 0.25, ease: "bounce.in" } })
-            .to("#hand-sec",{ morphSVG: "#handSec02" })
-            .to("#hand-sec",{ morphSVG: "#handSec01" });
+            if (canMorph) {
+                gsap.timeline({ repeat: 0, defaults: {duration: 0.25, ease: "bounce.in" } })
+                .to("#hand-sec",{ morphSVG: "#handSec02" })
+                .to("#hand-sec",{ morphSVG: "#handSec01" });
+            } else {
+                // Fallback: quick scale/rotate pulse
+                gsap.timeline({ repeat: 0, defaults: {duration: 0.15, ease: "bounce.in" } })
+                .to("#hand-sec", { scale: 1.08, transformOrigin: "50% 50%" })
+                .to("#hand-sec", { scale: 1, transformOrigin: "50% 50%" });
+            }
         }
     })
     .set( sec, { onComplete() {
@@ -89,11 +136,17 @@ function startAnimation() {
     .delay(5)
     .call(() => {
         let rotation = parseFloat(gsap.getProperty(min, "rotation").toFixed(1));
-        if( ( rotation > 5 && rotation < 175 ) || ( rotation > 185 && rotation < 355 )  )
+            if( ( rotation > 5 && rotation < 175 ) || ( rotation > 185 && rotation < 355 )  )
         {
-            gsap.timeline({ repeat: 0, defaults: {duration: 0.25, ease: "bounce.in" } })
-            .to("#hand-min",{ morphSVG: "#handMin02" })
-            .to("#hand-min",{ morphSVG: "#handMin01" });
+            if (canMorph) {
+                gsap.timeline({ repeat: 0, defaults: {duration: 0.25, ease: "bounce.in" } })
+                .to("#hand-min",{ morphSVG: "#handMin02" })
+                .to("#hand-min",{ morphSVG: "#handMin01" });
+            } else {
+                gsap.timeline({ repeat: 0, defaults: {duration: 0.15, ease: "bounce.in" } })
+                .to("#hand-min", { scale: 1.06, transformOrigin: "50% 50%" })
+                .to("#hand-min", { scale: 1, transformOrigin: "50% 50%" });
+            }
         }
     })
     .set( min, { onComplete() {
@@ -108,9 +161,15 @@ function startAnimation() {
         if( ( rotation > 2 && rotation < 178 ) || ( rotation > 182 && rotation < 358 )  )
         {
             changingHr = true;
-            gsap.timeline({ repeat: 0, defaults: {duration: 0.25, ease: "bounce.in" } })
-            .to("#hand-hr",{ morphSVG: "#handHr02" })
-            .to("#hand-hr",{ morphSVG: "#handHr01" });
+            if (canMorph) {
+                gsap.timeline({ repeat: 0, defaults: {duration: 0.25, ease: "bounce.in" } })
+                .to("#hand-hr",{ morphSVG: "#handHr02" })
+                .to("#hand-hr",{ morphSVG: "#handHr01" });
+            } else {
+                gsap.timeline({ repeat: 0, defaults: {duration: 0.15, ease: "bounce.in" } })
+                .to("#hand-hr", { scale: 1.06, transformOrigin: "50% 50%" })
+                .to("#hand-hr", { scale: 1, transformOrigin: "50% 50%" });
+            }
         }
     })
     .set( hr, { onComplete() {
