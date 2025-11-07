@@ -1,0 +1,80 @@
+/* Minimal styles ported from the provided animated navbar assets. */
+.animated-nav {
+  --nav-height: 56px;
+  position: relative;
+  display: block;
+  width: 100%;
+  padding: 8px 16px;
+}
+
+.animated-nav ul {
+  list-style: none;
+  display: flex;
+  gap: 24px;
+  align-items: center;
+  margin: 0;
+  padding: 0;
+}
+
+.animated-nav li {
+  display: inline-flex;
+  align-items: center;
+}
+
+.animated-nav button {
+  background: transparent;
+  border: none;
+  color: #e6eef8;
+  font-weight: 600;
+  padding: 8px 12px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.animated-nav li.active button {
+  color: white;
+}
+
+.animated-nav .active-element {
+  --active-element-width: 0px;
+  --active-element-scale-x: 1;
+  --active-element-scale-y: 1;
+  --active-element-opacity: 0;
+  --active-element-show: 0;
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 100%;
+  pointer-events: none;
+  display: block;
+  transform-origin: center;
+  transition: opacity 0.2s ease;
+}
+
+.animated-nav .active-element .beam {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: var(--active-element-width);
+  height: 100%;
+  opacity: var(--active-element-opacity);
+}
+
+.animated-nav .strike {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* simple dark background so the nav is visible in dashboards */
+.animated-nav {
+  background: linear-gradient(90deg, rgba(2,48,71,0.6), rgba(1,20,40,0.6));
+  border-radius: 8px;
+}
+
+@media (max-width: 640px) {
+  .animated-nav ul { gap: 12px; }
+  .animated-nav button { font-size: 13px; }
+}

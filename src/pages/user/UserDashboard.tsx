@@ -11,6 +11,7 @@ import {
   Calendar,
   
 } from 'lucide-react';
+import AnimatedNav from '../../components/AnimatedNav';
 
 export const UserDashboard: React.FC = () => {
   // local state
@@ -64,6 +65,9 @@ export const UserDashboard: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       <Header title="My Profile" />
+      <div className="max-w-7xl mx-auto px-6">
+        <AnimatedNav />
+      </div>
       
       <div className="max-w-7xl mx-auto px-6 py-8">
         {/* Profile Section */}
