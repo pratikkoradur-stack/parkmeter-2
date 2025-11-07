@@ -18,7 +18,6 @@ import {
   Bell
 } from 'lucide-react';
 import VehiclesListModal from '../../components/VehiclesListModal';
-import AnimatedNav from '../../components/AnimatedNav';
 
 export const StaffDashboard: React.FC = () => {
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -127,9 +126,6 @@ export const StaffDashboard: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       <Header title="Staff Dashboard" />
-      <div className="max-w-7xl mx-auto px-6">
-        <AnimatedNav />
-      </div>
       
       <div className="max-w-7xl mx-auto px-6 py-8">
         {/* Welcome Section */}
