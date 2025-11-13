@@ -6,58 +6,41 @@ on:
 
 jobs:
   deploy:
-    name: Deploy to EC2
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Deploy files via SSH
+      - name: Deploy to temporary directory
         uses: easingthemes/ssh-deploy@v4
-        with:
+        env:
           SSH_PRIVATE_KEY: ${{ secrets.EC2_SSH_KEY }}
-          REMOTE_HOST: ${{ secrets.HOST_DNS }}
-          REMOTE_USER: ${{ secrets.USERNAME }}
-          TARGET: ${{ secrets.TARGET_DIR }}
+          REMOTE_HOST: ${{ secrets.EC2_IP }}
+          REMOTE_USER: ${{ secrets.EC2_USERNAME }}
+          TARGET: /home/ec2-user/app  # ✅ Fixed path
           SOURCE: ./
           EXCLUDE: '.git/, .github/, node_modules/'
 
-      - name: Execute remote commands
+      - name: Setup web server and move files
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{ secrets.HOST_DNS }}
-          username: ${{ secrets.USERNAME }}
+          host: ${{ secrets.EC2_IP }}
+          username: ${{ secrets.EC2_USERNAME }}
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            # Update system
-            sudo yum update -y || sudo apt-get update -y
+            # Update and install Apache
+            sudo yum update -y
+            sudo yum install -y httpd
             
-            # Install Apache (for Amazon Linux)
-            if command -v yum &> /dev/null; then
-              sudo yum install -y httpd
-              sudo systemctl start httpd
-              sudo systemctl enable httpd
-              WEB_ROOT="/var/www/html"
-            else
-              # For Ubuntu
-              sudo apt-get install -y apache2
-              sudo systemctl start apache2
-              sudo systemctl enable apache2
-              WEB_ROOT="/var/www/html"
-            fi
+            # Copy files to web root
+            sudo cp -r /home/ec2-user/app/* /var/www/html/
             
-            # Fix permissions - THIS IS CRITICAL!
-            sudo chown -R ${{ secrets.USERNAME }}:${{ secrets.USERNAME }} $WEB_ROOT
-            sudo chmod -R 755 $WEB_ROOT
+            # Fix permissions
+            sudo chown -R apache:apache /var/www/html
+            sudo chmod -R 755 /var/www/html
             
-            # Copy files to web root (if TARGET_DIR is not web root)
-            if [ "${{ secrets.TARGET_DIR }}" != "$WEB_ROOT" ]; then
-              sudo cp -r ${{ secrets.TARGET_DIR }}/* $WEB_ROOT/ || true
-              sudo chown -R apache:apache $WEB_ROOT/* || sudo chown -R www-data:www-data $WEB_ROOT/*
-            fi
-            
-            # Restart web server
-            sudo systemctl restart httpd || sudo systemctl restart apache2
+            # Start Apache
+            sudo systemctl start httpd
+            sudo systemctl enable httpd
             
             echo "✅ Deployment completed successfully!"
