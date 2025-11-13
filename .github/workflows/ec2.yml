@@ -1,0 +1,63 @@
+name: Deploy to EC2
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    name: Deploy to EC2
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy files via SSH
+        uses: easingthemes/ssh-deploy@v4
+        with:
+          SSH_PRIVATE_KEY: ${{ secrets.EC2_SSH_KEY }}
+          REMOTE_HOST: ${{ secrets.HOST_DNS }}
+          REMOTE_USER: ${{ secrets.USERNAME }}
+          TARGET: ${{ secrets.TARGET_DIR }}
+          SOURCE: ./
+          EXCLUDE: '.git/, .github/, node_modules/'
+
+      - name: Execute remote commands
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.HOST_DNS }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            # Update system
+            sudo yum update -y || sudo apt-get update -y
+            
+            # Install Apache (for Amazon Linux)
+            if command -v yum &> /dev/null; then
+              sudo yum install -y httpd
+              sudo systemctl start httpd
+              sudo systemctl enable httpd
+              WEB_ROOT="/var/www/html"
+            else
+              # For Ubuntu
+              sudo apt-get install -y apache2
+              sudo systemctl start apache2
+              sudo systemctl enable apache2
+              WEB_ROOT="/var/www/html"
+            fi
+            
+            # Fix permissions - THIS IS CRITICAL!
+            sudo chown -R ${{ secrets.USERNAME }}:${{ secrets.USERNAME }} $WEB_ROOT
+            sudo chmod -R 755 $WEB_ROOT
+            
+            # Copy files to web root (if TARGET_DIR is not web root)
+            if [ "${{ secrets.TARGET_DIR }}" != "$WEB_ROOT" ]; then
+              sudo cp -r ${{ secrets.TARGET_DIR }}/* $WEB_ROOT/ || true
+              sudo chown -R apache:apache $WEB_ROOT/* || sudo chown -R www-data:www-data $WEB_ROOT/*
+            fi
+            
+            # Restart web server
+            sudo systemctl restart httpd || sudo systemctl restart apache2
+            
+            echo "✅ Deployment completed successfully!"
