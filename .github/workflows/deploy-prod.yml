@@ -36,5 +36,5 @@ jobs:
           git pull origin main
           npm ci
           npm run build
-          pm2 restart parkmeter-2
+          pm2 restart parkmeter-server-api
           EOF
