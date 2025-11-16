@@ -1,6 +1,5 @@
 import React, { useState } from 'react';
 import { isSupabaseConfigured, supabase } from '../lib/supabase';
-import { isMongoApiConfigured, insertVehicle } from '../lib/mongo';
 
 type Props = {
   isOpen: boolean;
@@ -52,9 +51,7 @@ export const VehicleRegistrationModal: React.FC<Props> = ({ isOpen, onClose, onS
     };
 
     try {
-      if (isMongoApiConfigured()) {
-        await insertVehicle(record);
-      } else if (isSupabaseConfigured()) {
+      if (isSupabaseConfigured()) {
         const { error: supErr } = await supabase.from('vehicles').insert([record]);
         if (supErr) throw supErr;
       } else {
