@@ -75,14 +75,6 @@ export const VehicleRegistrationModal: React.FC<Props> = ({ isOpen, onClose, onS
     } finally {
       setLoading(false);
     }
-
-      onSuccess && onSuccess();
-      onClose();
-    } catch (err: any) {
-      setError(err?.message || 'Failed to save vehicle');
-    } finally {
-      setLoading(false);
-    }
   };
 
   return (
