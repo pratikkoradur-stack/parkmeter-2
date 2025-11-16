@@ -51,15 +51,30 @@ export const VehicleRegistrationModal: React.FC<Props> = ({ isOpen, onClose, onS
     };
 
     try {
-      if (isSupabaseConfigured()) {
-        const { error: supErr } = await supabase.from('vehicles').insert([record]);
-        if (supErr) throw supErr;
-      } else {
-        // fallback to localStorage
-        const existing = JSON.parse(localStorage.getItem('vehicles') || '[]');
-        existing.push(record);
-        localStorage.setItem('vehicles', JSON.stringify(existing));
+      // This sends the data to your new EC2 server
+      const response = await fetch('http://15.206.88.25:5000/vehicles', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(record),
+      });
+
+      if (!response.ok) {
+        // Get the error message from your API if it fails
+        const errData = await response.json();
+        throw new Error(errData.error || 'Failed to save vehicle');
       }
+
+      // This part is the same as your old code
+      onSuccess && onSuccess();
+      onClose();
+
+    } catch (err: any) {
+      setError(err?.message || 'Failed to save vehicle');
+    } finally {
+      setLoading(false);
+    }
 
       onSuccess && onSuccess();
       onClose();
