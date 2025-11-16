@@ -32,9 +32,9 @@ jobs:
           export NVM_DIR="$HOME/.nvm"
           [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
           nvm use 22.12.0
-          cd ~/github-pipeline-ts
+          cd ~/parkmeter-2
           git pull origin main
           npm ci
           npm run build
-          pm2 restart github-pipeline-test
+          pm2 restart parkmeter-2
           EOF
