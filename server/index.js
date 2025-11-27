@@ -74,7 +74,7 @@ async function main() {
     }
   });
 
-  // IMPORTANT FIX
+
   app.listen(port, '0.0.0.0', () => {
     console.log('Mongo API server listening on 0.0.0.0:' + port);
   });
