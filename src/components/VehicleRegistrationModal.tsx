@@ -31,7 +31,7 @@ export const VehicleRegistrationModal: React.FC<Props> = ({ isOpen, onClose, onS
     return null;
   };
 
-  const save = async () => {
+const save = async () => {
     setError(null);
     const v = validate();
     if (v) {
@@ -39,6 +39,8 @@ export const VehicleRegistrationModal: React.FC<Props> = ({ isOpen, onClose, onS
       return;
     }
     setLoading(true);
+
+    // Prepare the data for Supabase
     const record = {
       plate: plate.trim().toUpperCase(),
       owner: owner.trim(),
@@ -47,31 +49,27 @@ export const VehicleRegistrationModal: React.FC<Props> = ({ isOpen, onClose, onS
       type,
       contact: contact.trim(),
       notes: notes.trim(),
+      // Supabase will handle created_at automatically, or we can send it
       created_at: new Date().toISOString()
     };
 
     try {
-      // This sends the data to your new EC2 server
-      const response = await fetch('http://15.206.88.25:5000/vehicles', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(record),
-      });
+      // ---------------------------------------------------------
+      // FIX: Talk to Supabase directly, instead of Port 5000
+      // ---------------------------------------------------------
+      const { error: supabaseError } = await supabase
+        .from('vehicles')
+        .insert([record]);
 
-      if (!response.ok) {
-        // Get the error message from your API if it fails
-        const errData = await response.json();
-        throw new Error(errData.error || 'Failed to save vehicle');
-      }
+      if (supabaseError) throw supabaseError;
 
-      // This part is the same as your old code
+      // If successful:
       onSuccess && onSuccess();
       onClose();
 
     } catch (err: any) {
-      setError(err?.message || 'Failed to save vehicle');
+      console.error(err);
+      setError(err.message || 'Failed to save vehicle');
     } finally {
       setLoading(false);
     }
