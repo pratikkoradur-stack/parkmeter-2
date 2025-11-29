@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { CameraScanner } from '../../components/CameraScanner';
 import { VehicleRegistrationModal } from '../../components/VehicleRegistrationModal';
 import { Header } from '../../components/layout/Header';
@@ -15,11 +16,13 @@ import {
   BarChart3,
   Database,
   Layout,
-  Bell
+  Bell,
+  Map
 } from 'lucide-react';
 import VehiclesListModal from '../../components/VehiclesListModal';
 
 export const StaffDashboard: React.FC = () => {
+  const navigate = useNavigate();
   const [currentTime, setCurrentTime] = useState(new Date());
 
   useEffect(() => {
@@ -216,7 +219,10 @@ export const StaffDashboard: React.FC = () => {
         {/* Additional Tools */}
         <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
           {toolCards.map((tool, index) => (
-            <div key={index} onClick={() => { if (tool.title === 'Database Management') setShowVehicles(true); }} className="hover:shadow-lg transition-shadow cursor-pointer">
+            <div key={index} onClick={() => { 
+              if (tool.title === 'Database Management') setShowVehicles(true);
+              if (tool.title === 'Parking Layout') navigate('/parking-layout');
+            }} className="hover:shadow-lg transition-shadow cursor-pointer">
               <Card>
                 <CardContent className="p-6 text-center">
                   <div className={`w-12 h-12 rounded-lg ${tool.color} flex items-center justify-center mx-auto mb-4`}>

@@ -11,6 +11,7 @@ import { AuthPage } from './pages/AuthPage';
 import { StaffDashboard } from './pages/staff/StaffDashboard';
 import { UserDashboard } from './pages/user/UserDashboard';
 import { SettingsPage } from './pages/SettingsPage';
+import { ParkingLayoutPage } from './pages/ParkingLayoutPage';
 
 function App() {
   return (
@@ -50,6 +51,16 @@ function App() {
                 element={
                   <ProtectedRoute>
                     <SettingsPage />
+                  </ProtectedRoute>
+                }
+              />
+
+              {/* Protected Parking Layout Route */}
+              <Route
+                path="/parking-layout"
+                element={
+                  <ProtectedRoute>
+                    <ParkingLayoutPage />
                   </ProtectedRoute>
                 }
               />

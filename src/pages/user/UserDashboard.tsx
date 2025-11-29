@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { VehicleRegistrationModal } from '../../components/VehicleRegistrationModal';
 import { Header } from '../../components/layout/Header';
 import { Card, CardContent } from '../../components/ui/Card';
@@ -9,10 +10,11 @@ import {
   Clock, 
   Bell, 
   Calendar,
-  
+  Map,
 } from 'lucide-react';
 
 export const UserDashboard: React.FC = () => {
+  const navigate = useNavigate();
   // local state
   const [showVehicleModal, setShowVehicleModal] = useState(false);
   const [currentTime, setCurrentTime] = useState<Date>(new Date());
@@ -34,6 +36,14 @@ export const UserDashboard: React.FC = () => {
       color: 'bg-blue-50',
       iconColor: 'text-blue-600',
       onClick: () => setShowVehicleModal(true)
+    },
+    {
+      icon: Map,
+      title: 'Parking Layout',
+      description: 'View parking space availability',
+      color: 'bg-purple-50',
+      iconColor: 'text-purple-600',
+      onClick: () => navigate('/parking-layout')
     },
     {
       icon: CreditCard,
