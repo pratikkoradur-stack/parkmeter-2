@@ -3,6 +3,7 @@ import { Header } from '../components/layout/Header';
 import { Card, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { ArrowLeft, MapPin, AlertCircle } from 'lucide-react';
+import { VehicleRegistrationModal } from '../components/VehicleRegistrationModal';
 import { useNavigate } from 'react-router-dom';
 
 type ParkingSlot = {
@@ -62,13 +63,107 @@ const getSlotLabel = (status: string): string => {
 
 export const ParkingLayoutPage: React.FC = () => {
   const navigate = useNavigate();
-  const [parkingSlots] = useState<ParkingSlot[]>(generateMockParkingData());
+  const [parkingSlots, setParkingSlots] = useState<ParkingSlot[]>(() => {
+    try {
+      const raw = localStorage.getItem('parkingSlots');
+      if (raw) return JSON.parse(raw) as ParkingSlot[];
+    } catch (err) {
+      console.warn('Failed to load parking slots from localStorage', err);
+    }
+    return generateMockParkingData();
+  });
   const [selectedSlot, setSelectedSlot] = useState<ParkingSlot | null>(null);
+  const [bookingOpen, setBookingOpen] = useState(false);
+  const [bookingName, setBookingName] = useState('');
+  const [bookingPlate, setBookingPlate] = useState('');
+  const [bookingContact, setBookingContact] = useState('');
+  const [bookingDurationHours, setBookingDurationHours] = useState<number>(1);
+  const [bookingError, setBookingError] = useState<string | null>(null);
+  const [vehicleModalOpen, setVehicleModalOpen] = useState(false);
 
   const availableCount = parkingSlots.filter(s => s.status === 'available').length;
   const occupiedCount = parkingSlots.filter(s => s.status === 'occupied').length;
   const reservedCount = parkingSlots.filter(s => s.status === 'reserved').length;
   const maintenanceCount = parkingSlots.filter(s => s.status === 'maintenance').length;
+
+  const persistSlots = (slots: ParkingSlot[]) => {
+    try {
+      localStorage.setItem('parkingSlots', JSON.stringify(slots));
+    } catch (err) {
+      console.warn('Failed to persist parking slots', err);
+    }
+  };
+
+  const openBookingFor = (slot: ParkingSlot) => {
+    setSelectedSlot(slot);
+    setBookingName('');
+    setBookingPlate(slot.vehicle || '');
+    setBookingContact('');
+    setBookingDurationHours(1);
+    setBookingError(null);
+    setBookingOpen(true);
+  };
+
+  const saveBooking = () => {
+    setBookingError(null);
+    if (!selectedSlot) return;
+    if (!bookingName || bookingName.trim().length < 2) {
+      setBookingError('Name is required');
+      return;
+    }
+    if (!bookingPlate || bookingPlate.trim().length < 2) {
+      setBookingError('Vehicle plate is required');
+      return;
+    }
+
+    // Open vehicle registration modal to register vehicle first,
+    // then finalize reservation in `handleVehicleRegistered`.
+    setBookingOpen(false);
+    setVehicleModalOpen(true);
+  };
+
+  const handleVehicleRegistered = () => {
+    if (!selectedSlot) return;
+
+    const updated = parkingSlots.map(s => {
+      if (s.id !== selectedSlot.id) return s;
+      return {
+        ...s,
+        status: 'reserved',
+        vehicle: bookingPlate.trim().toUpperCase(),
+        bookedBy: bookingName.trim(),
+      } as ParkingSlot;
+    });
+
+    setParkingSlots(updated);
+    persistSlots(updated);
+
+    const newSelected = updated.find(s => s.id === selectedSlot.id) || null;
+    setSelectedSlot(newSelected);
+    setVehicleModalOpen(false);
+  };
+
+  const cancelReservation = (slotId: string) => {
+    const ok = window.confirm('Cancel reservation for this slot?');
+    if (!ok) return;
+
+    const updated = parkingSlots.map(s => {
+      if (s.id !== slotId) return s;
+      return {
+        ...s,
+        status: 'available',
+        vehicle: undefined,
+        bookedBy: undefined,
+      } as ParkingSlot;
+    });
+
+    setParkingSlots(updated);
+    persistSlots(updated);
+
+    if (selectedSlot && selectedSlot.id === slotId) {
+      setSelectedSlot(updated.find(s => s.id === slotId) || null);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -214,11 +309,24 @@ export const ParkingLayoutPage: React.FC = () => {
                       </div>
                     )}
 
-                    {selectedSlot.status === 'available' && (
-                      <Button variant="primary" className="w-full mt-6">
-                        Book Now
-                      </Button>
-                    )}
+                                    {selectedSlot.status === 'available' && (
+                                      <Button
+                                        variant="primary"
+                                        className="w-full mt-6"
+                                        onClick={() => openBookingFor(selectedSlot)}
+                                      >
+                                        Book Now
+                                      </Button>
+                                    )}
+
+                                    {selectedSlot.status === 'reserved' && (
+                                      <button
+                                        onClick={() => cancelReservation(selectedSlot.id)}
+                                        className="w-full mt-4 px-3 py-2 bg-red-600 text-white rounded"
+                                      >
+                                        Cancel Reservation
+                                      </button>
+                                    )}
                   </div>
                 ) : (
                   <div className="flex flex-col items-center justify-center py-8 text-gray-500">
@@ -229,6 +337,53 @@ export const ParkingLayoutPage: React.FC = () => {
               </CardContent>
             </Card>
           </div>
+          {bookingOpen && selectedSlot && (
+            <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
+              <div className="bg-white rounded p-6 w-full max-w-md">
+                <div className="flex justify-between items-center mb-4">
+                  <h3 className="text-lg font-semibold">Book Slot {selectedSlot.id}</h3>
+                  <button onClick={() => setBookingOpen(false)} className="text-gray-500">Close</button>
+                </div>
+
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Your Name</label>
+                    <input value={bookingName} onChange={e => setBookingName(e.target.value)} className="w-full border px-3 py-2 rounded" />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Vehicle Plate</label>
+                    <input value={bookingPlate} onChange={e => setBookingPlate(e.target.value)} className="w-full border px-3 py-2 rounded" />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Contact (optional)</label>
+                    <input value={bookingContact} onChange={e => setBookingContact(e.target.value)} className="w-full border px-3 py-2 rounded" />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700">Duration (hours)</label>
+                    <input type="number" min={1} value={bookingDurationHours} onChange={e => setBookingDurationHours(Number(e.target.value))} className="w-full border px-3 py-2 rounded" />
+                  </div>
+
+                  {bookingError && <div className="text-sm text-red-600">{bookingError}</div>}
+
+                  <div className="flex justify-end space-x-2">
+                    <button onClick={() => setBookingOpen(false)} className="px-3 py-2 bg-gray-200 rounded">Cancel</button>
+                    <button onClick={saveBooking} className="px-3 py-2 bg-blue-600 text-white rounded">Confirm Booking</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+          <VehicleRegistrationModal
+            isOpen={vehicleModalOpen}
+            onClose={() => setVehicleModalOpen(false)}
+            onSuccess={handleVehicleRegistered}
+            initialPlate={bookingPlate}
+            initialOwner={bookingName}
+            initialContact={bookingContact}
+          />
         </div>
       </div>
     </div>

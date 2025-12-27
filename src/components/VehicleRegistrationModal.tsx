@@ -6,15 +6,17 @@ type Props = {
   onClose: () => void;
   onSuccess?: () => void;
   initialPlate?: string;
+  initialOwner?: string;
+  initialContact?: string;
 };
 
-export const VehicleRegistrationModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, initialPlate }) => {
+export const VehicleRegistrationModal: React.FC<Props> = ({ isOpen, onClose, onSuccess, initialPlate, initialOwner, initialContact }) => {
   const [plate, setPlate] = useState(initialPlate || '');
-  const [owner, setOwner] = useState('');
+  const [owner, setOwner] = useState(initialOwner || '');
+  const [contact, setContact] = useState(initialContact || '');
   const [model, setModel] = useState('');
   const [color, setColor] = useState('');
   const [type, setType] = useState('Car');
-  const [contact, setContact] = useState('');
   const [notes, setNotes] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -22,6 +24,12 @@ export const VehicleRegistrationModal: React.FC<Props> = ({ isOpen, onClose, onS
   React.useEffect(() => {
     setPlate(initialPlate || '');
   }, [initialPlate]);
+
+  React.useEffect(() => {
+    setPlate(initialPlate || '');
+    setOwner(initialOwner || '');
+    setContact(initialContact || '');
+  }, [initialPlate, initialOwner, initialContact]);
 
   if (!isOpen) return null;
 
@@ -31,7 +39,7 @@ export const VehicleRegistrationModal: React.FC<Props> = ({ isOpen, onClose, onS
     return null;
   };
 
-const save = async () => {
+  const save = async () => {
     setError(null);
     const v = validate();
     if (v) {
