@@ -1,16 +1,18 @@
 pipeline {
     agent any
     stages {
-        stage('Build') {
+        stage('Build Image') {
             steps {
-                sh 'docker build -t my-app .'
+                // This command tells Docker to build your project
+                sh 'docker build -t parkmeter-image .'
             }
         }
-        stage('Deploy') {
+        stage('Run Container') {
             steps {
-                sh 'docker stop my-running-app || true'
-                sh 'docker rm my-running-app || true'
-                sh 'docker run -d -p 80:80 --name my-running-app my-app'
+                // This stops any old version and starts the new one
+                sh 'docker stop parkmeter-container || true'
+                sh 'docker rm parkmeter-container || true'
+                sh 'docker run -d -p 80:80 --name parkmeter-container parkmeter-image'
             }
         }
     }
