@@ -1,0 +1,17 @@
+pipeline {
+    agent any
+    stages {
+        stage('Build') {
+            steps {
+                sh 'docker build -t my-app .'
+            }
+        }
+        stage('Deploy') {
+            steps {
+                sh 'docker stop my-running-app || true'
+                sh 'docker rm my-running-app || true'
+                sh 'docker run -d -p 80:80 --name my-running-app my-app'
+            }
+        }
+    }
+}
