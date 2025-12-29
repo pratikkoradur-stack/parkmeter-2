@@ -1,10 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Header } from '../components/layout/Header';
 import { Card, CardContent } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { ArrowLeft, MapPin, AlertCircle } from 'lucide-react';
 import { VehicleRegistrationModal } from '../components/VehicleRegistrationModal';
 import { useNavigate } from 'react-router-dom';
+import { supabase, isSupabaseConfigured } from '../lib/supabase';
+
+// State for booked list & total slots will be added in the component body below.
 
 type ParkingSlot = {
   id: string;
@@ -19,13 +22,12 @@ const PARKING_COLS = 8;
 const generateMockParkingData = (): ParkingSlot[] => {
   const slots: ParkingSlot[] = [];
   for (let i = 0; i < PARKING_ROWS * PARKING_COLS; i++) {
-    const statuses: Array<'available' | 'occupied' | 'reserved' | 'maintenance'> = ['available', 'occupied', 'reserved', 'maintenance'];
-    const randomStatus = statuses[Math.floor(Math.random() * statuses.length)];
+    // Start every slot as available with no vehicle or booking information.
     slots.push({
       id: `SLOT-${String(i + 1).padStart(3, '0')}`,
-      status: randomStatus,
-      vehicle: randomStatus === 'occupied' ? `KA-01-AB-${String(Math.floor(Math.random() * 9999)).padStart(4, '0')}` : undefined,
-      bookedBy: randomStatus === 'reserved' ? `User ${i % 5 + 1}` : undefined
+      status: 'available',
+      vehicle: undefined,
+      bookedBy: undefined
     });
   }
   return slots;
@@ -81,10 +83,36 @@ export const ParkingLayoutPage: React.FC = () => {
   const [bookingError, setBookingError] = useState<string | null>(null);
   const [vehicleModalOpen, setVehicleModalOpen] = useState(false);
 
-  const availableCount = parkingSlots.filter(s => s.status === 'available').length;
-  const occupiedCount = parkingSlots.filter(s => s.status === 'occupied').length;
-  const reservedCount = parkingSlots.filter(s => s.status === 'reserved').length;
-  const maintenanceCount = parkingSlots.filter(s => s.status === 'maintenance').length;
+  // Additional state for total slots and the list of booked vehicles
+  const [totalSlots, setTotalSlots] = useState<number>(PARKING_ROWS * PARKING_COLS);
+  const [bookedVehicles, setBookedVehicles] = useState<any[]>([]);
+  const [activeTab, setActiveTab] = useState<'map' | 'booked'>('map');
+
+  useEffect(() => {
+    // Keep total slots in sync with layout size
+    setTotalSlots(PARKING_ROWS * PARKING_COLS);
+  }, []);
+
+  useEffect(() => {
+    // Fetch persisted bookings/vehicles from Supabase when configured
+    (async () => {
+      if (!isSupabaseConfigured()) return;
+      try {
+        const { data, error } = await supabase.from('bookings').select('*').order('created_at', { ascending: false });
+        if (error) throw error;
+        setBookedVehicles(data || []);
+      } catch (err) {
+        console.error('Failed to load bookings', err);
+      }
+    })();
+  }, []);
+
+  // If there are no bookings or vehicle records yet, show zero counts until a booking occurs.
+  const hasBookings = parkingSlots.some(s => s.status !== 'available' || s.vehicle || s.bookedBy);
+  const availableCount = hasBookings ? parkingSlots.filter(s => s.status === 'available').length : 0;
+  const occupiedCount = hasBookings ? parkingSlots.filter(s => s.status === 'occupied').length : 0;
+  const reservedCount = hasBookings ? parkingSlots.filter(s => s.status === 'reserved').length : 0;
+  const maintenanceCount = hasBookings ? parkingSlots.filter(s => s.status === 'maintenance').length : 0;
 
   const persistSlots = (slots: ParkingSlot[]) => {
     try {
@@ -122,7 +150,8 @@ export const ParkingLayoutPage: React.FC = () => {
     setVehicleModalOpen(true);
   };
 
-  const handleVehicleRegistered = () => {
+  // When a vehicle is registered we expect the modal to return the saved vehicle record
+  const handleVehicleRegistered = (vehicle?: any) => {
     if (!selectedSlot) return;
 
     const updated = parkingSlots.map(s => {
@@ -130,7 +159,7 @@ export const ParkingLayoutPage: React.FC = () => {
       return {
         ...s,
         status: 'reserved',
-        vehicle: bookingPlate.trim().toUpperCase(),
+        vehicle: vehicle ? vehicle.plate : bookingPlate.trim().toUpperCase(),
         bookedBy: bookingName.trim(),
       } as ParkingSlot;
     });
@@ -141,6 +170,31 @@ export const ParkingLayoutPage: React.FC = () => {
     const newSelected = updated.find(s => s.id === selectedSlot.id) || null;
     setSelectedSlot(newSelected);
     setVehicleModalOpen(false);
+
+    // Save booking into Supabase bookings table for persistence and list view
+    (async () => {
+      try {
+        if (!isSupabaseConfigured()) return;
+
+        const bookingRecord = {
+          slot_id: selectedSlot.id,
+          plate: vehicle ? vehicle.plate : bookingPlate.trim().toUpperCase(),
+          owner: vehicle ? vehicle.owner : bookingName.trim(),
+          contact: bookingContact.trim() || null,
+          duration_hours: bookingDurationHours,
+          status: 'reserved',
+          created_at: new Date().toISOString()
+        };
+
+        const { data: insertData, error: insertErr } = await supabase.from('bookings').insert([bookingRecord]).select().single();
+        if (insertErr) throw insertErr;
+        // Re-fetch bookings list
+        const { data } = await supabase.from('bookings').select('*').order('created_at', { ascending: false });
+        setBookedVehicles(data || []);
+      } catch (err) {
+        console.error('Failed to persist booking', err);
+      }
+    })();
   };
 
   const cancelReservation = (slotId: string) => {
@@ -159,6 +213,20 @@ export const ParkingLayoutPage: React.FC = () => {
 
     setParkingSlots(updated);
     persistSlots(updated);
+
+    // Remove the booking record from Supabase (mark cancelled)
+    (async () => {
+      try {
+        if (!isSupabaseConfigured()) return;
+        // For simplicity, mark the booking as 'cancelled' where slot_id matches
+        await supabase.from('bookings').update({ status: 'cancelled' }).eq('slot_id', slotId);
+        // Re-fetch bookings list
+        const { data } = await supabase.from('bookings').select('*').order('created_at', { ascending: false });
+        setBookedVehicles(data || []);
+      } catch (err) {
+        console.error('Failed to update booking', err);
+      }
+    })();
 
     if (selectedSlot && selectedSlot.id === slotId) {
       setSelectedSlot(updated.find(s => s.id === slotId) || null);
@@ -180,12 +248,12 @@ export const ParkingLayoutPage: React.FC = () => {
         </button>
 
         {/* Stats Section */}
-        <div className="grid md:grid-cols-4 gap-4 mb-8">
+        <div className="grid md:grid-cols-5 gap-4 mb-8">
           <Card>
             <CardContent className="p-4 text-center">
-              <div className="text-3xl font-bold text-green-600 mb-1">{availableCount}</div>
+              <div className="text-3xl font-bold text-blue-600 mb-1">{totalSlots}</div>
               <div className="text-sm text-gray-600 flex items-center justify-center gap-1">
-                <span>🟢</span> Available
+                <span>📦</span> Total Slots
               </div>
             </CardContent>
           </Card>
@@ -205,6 +273,18 @@ export const ParkingLayoutPage: React.FC = () => {
               </div>
             </CardContent>
           </Card>
+
+          {/* Tab switcher for Map / Booked Vehicles */}
+          <div>
+            <Card>
+              <CardContent className="p-4 text-center">
+                <div className="flex gap-2 justify-center">
+                  <button onClick={() => setActiveTab('map')} className={`px-3 py-1 rounded ${activeTab === 'map' ? 'bg-blue-600 text-white' : 'bg-gray-100'}`}>Map</button>
+                  <button onClick={() => setActiveTab('booked')} className={`px-3 py-1 rounded ${activeTab === 'booked' ? 'bg-blue-600 text-white' : 'bg-gray-100'}`}>Booked</button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
           <Card>
             <CardContent className="p-4 text-center">
               <div className="text-3xl font-bold text-gray-600 mb-1">{maintenanceCount}</div>
@@ -224,48 +304,71 @@ export const ParkingLayoutPage: React.FC = () => {
                   <MapPin size={24} className="text-blue-600" />
                   <h2 className="text-xl font-semibold text-gray-900">Parking Area Map</h2>
                 </div>
-                
-                {/* Parking Grid */}
-                <div className="bg-gray-100 p-6 rounded-lg overflow-auto">
-                  <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${PARKING_COLS}, minmax(60px, 1fr))` }}>
-                    {parkingSlots.map((slot) => (
-                      <button
-                        key={slot.id}
-                        onClick={() => setSelectedSlot(slot)}
-                        className={`
-                          aspect-square rounded-lg font-bold text-white text-sm
-                          flex items-center justify-center cursor-pointer
-                          transition-all duration-200 transform hover:scale-105
-                          shadow-md hover:shadow-lg
-                          ${getSlotColor(slot.status)}
-                        `}
-                        title={`${slot.id} - ${slot.status}`}
-                      >
-                        <span className="text-lg">{getSlotLabel(slot.status)}</span>
-                      </button>
-                    ))}
-                  </div>
-                </div>
 
-                {/* Legend */}
-                <div className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 bg-green-500 rounded"></div>
-                    <span>Available</span>
+                {activeTab === 'map' ? (
+                  <>
+                    {/* Parking Grid */}
+                    <div className="bg-gray-100 p-6 rounded-lg overflow-auto">
+                      <div className="grid gap-2" style={{ gridTemplateColumns: `repeat(${PARKING_COLS}, minmax(60px, 1fr))` }}>
+                        {parkingSlots.map((slot) => (
+                          <button
+                            key={slot.id}
+                            onClick={() => setSelectedSlot(slot)}
+                            className={`
+                              aspect-square rounded-lg font-bold text-white text-sm
+                              flex items-center justify-center cursor-pointer
+                              transition-all duration-200 transform hover:scale-105
+                              shadow-md hover:shadow-lg
+                              ${getSlotColor(slot.status)}
+                            `}
+                            title={`${slot.id} - ${slot.status}`}
+                          >
+                            <span className="text-lg">{getSlotLabel(slot.status)}</span>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Legend */}
+                    <div className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 bg-green-500 rounded"></div>
+                        <span>Available</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 bg-red-500 rounded"></div>
+                        <span>Occupied</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 bg-yellow-500 rounded"></div>
+                        <span>Reserved</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-4 bg-gray-400 rounded"></div>
+                        <span>Maintenance</span>
+                      </div>
+                    </div>
+                  </>
+                ) : (
+                  <div>
+                    <h3 className="text-lg font-semibold mb-3">Booked Vehicles</h3>
+                    {bookedVehicles.length === 0 ? (
+                      <p className="text-sm text-gray-500">No bookings found.</p>
+                    ) : (
+                      <div className="space-y-3">
+                        {bookedVehicles.map(b => (
+                          <div key={b.id} className="p-3 border rounded flex items-center justify-between">
+                            <div>
+                              <div className="font-mono font-bold">{b.plate}</div>
+                              <div className="text-sm text-gray-600">{b.owner} • Slot {b.slot_id}</div>
+                            </div>
+                            <div className="text-sm text-gray-500">{new Date(b.created_at).toLocaleString()}</div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 bg-red-500 rounded"></div>
-                    <span>Occupied</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 bg-yellow-500 rounded"></div>
-                    <span>Reserved</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <div className="w-4 h-4 bg-gray-400 rounded"></div>
-                    <span>Maintenance</span>
-                  </div>
-                </div>
+                )}
               </CardContent>
             </Card>
           </div>

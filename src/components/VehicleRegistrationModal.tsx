@@ -4,7 +4,8 @@ import { isSupabaseConfigured, supabase } from '../lib/supabase';
 type Props = {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess?: () => void;
+  // When a vehicle is successfully saved we return the inserted vehicle row
+  onSuccess?: (vehicle?: any) => void;
   initialPlate?: string;
   initialOwner?: string;
   initialContact?: string;
@@ -33,6 +34,8 @@ export const VehicleRegistrationModal: React.FC<Props> = ({ isOpen, onClose, onS
 
   if (!isOpen) return null;
 
+  const supabaseConfigured = isSupabaseConfigured();
+
   const validate = () => {
     if (!plate || plate.trim().length < 3) return 'Number plate is required';
     if (!owner || owner.trim().length < 2) return 'Owner name is required';
@@ -46,6 +49,11 @@ export const VehicleRegistrationModal: React.FC<Props> = ({ isOpen, onClose, onS
       setError(v);
       return;
     }
+    if (!supabaseConfigured) {
+      setError('Supabase is not configured. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in your environment.');
+      return;
+    }
+
     setLoading(true);
 
     // Prepare the data for Supabase
@@ -62,22 +70,29 @@ export const VehicleRegistrationModal: React.FC<Props> = ({ isOpen, onClose, onS
     };
 
     try {
-      // ---------------------------------------------------------
-      // FIX: Talk to Supabase directly, instead of Port 5000
-      // ---------------------------------------------------------
-      const { error: supabaseError } = await supabase
+      // Try to insert and return the inserted row
+      const { data, error: supabaseError } = await supabase
         .from('vehicles')
-        .insert([record]);
+        .insert([record])
+        .select()
+        .single();
 
       if (supabaseError) throw supabaseError;
 
-      // If successful:
-      onSuccess && onSuccess();
+      // If successful: pass the inserted vehicle back to the caller
+      onSuccess && onSuccess(data);
       onClose();
 
     } catch (err: any) {
-      console.error(err);
-      setError(err.message || 'Failed to save vehicle');
+      console.error('Vehicle save error:', err);
+      // Map common network errors to a helpful message
+      if (err instanceof TypeError && err.message && err.message.toLowerCase().includes('failed to fetch')) {
+        setError('Network error: Unable to reach Supabase. Check your VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY and that the Supabase project allows your app origin.');
+      } else if (err?.message) {
+        setError(err.message);
+      } else {
+        setError('Failed to save vehicle');
+      }
     } finally {
       setLoading(false);
     }
@@ -133,11 +148,15 @@ export const VehicleRegistrationModal: React.FC<Props> = ({ isOpen, onClose, onS
             <textarea value={notes} onChange={e => setNotes(e.target.value)} className="w-full border px-3 py-2 rounded" />
           </div>
 
+          {!supabaseConfigured && (
+            <div className="text-sm text-yellow-700 mb-2">⚠️ Supabase not configured. Set <code>VITE_SUPABASE_URL</code> and <code>VITE_SUPABASE_ANON_KEY</code> in your environment to persist vehicles.</div>
+          )}
+
           {error && <div className="text-sm text-red-600">{error}</div>}
 
           <div className="flex justify-end space-x-2">
             <button onClick={onClose} className="px-3 py-2 bg-gray-200 rounded">Cancel</button>
-            <button onClick={save} disabled={loading} className="px-3 py-2 bg-blue-600 text-white rounded">{loading ? 'Saving...' : 'Register Vehicle'}</button>
+            <button onClick={save} disabled={loading || !supabaseConfigured} className="px-3 py-2 bg-blue-600 text-white rounded">{loading ? 'Saving...' : 'Register Vehicle'}</button>
           </div>
         </div>
       </div>

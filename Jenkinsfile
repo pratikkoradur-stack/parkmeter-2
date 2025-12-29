@@ -1,51 +1,65 @@
 pipeline {
     agent any
-    
+
+    tools {
+        // Ensure you have "NodeJS" configured in Manage Jenkins > Global Tool Configuration
+        // Replace 'Node 18' with whatever name you gave your installation
+        nodejs 'Node 18' 
+    }
+
+    environment {
+        // Define common variables here
+        APP_NAME = "parkmeter-app"
+    }
+
     stages {
-        stage('Checkout') {
+        stage('Install Dependencies') {
             steps {
-                echo 'STEP 1: Checking out code...'
-                checkout scm
+                echo 'Installing npm packages...'
+                sh 'npm install'
             }
         }
-        
-        stage('List Files') {
+
+        stage('Lint & Test') {
             steps {
-                echo 'STEP 2: Listing project files...'
-                sh '''
-                    pwd
-                    ls -la
-                    echo "Frontend files:"
-                    ls -la
-                    echo "Backend files:"
-                    ls -la server/
-                '''
+                echo 'Running tests...'
+                // This will run whatever script you have in package.json under "test"
+                sh 'npm test'
             }
         }
-        
-        stage('Check Versions') {
+
+        stage('Build') {
             steps {
-                echo 'STEP 3: Checking tool versions...'
-                sh '''
-                    node --version || echo "Node not installed"
-                    npm --version || echo "NPM not installed"
-                    git --version || echo "Git not installed"
-                '''
+                echo 'Building application (if applicable)...'
+                // Useful if you're using TypeScript or a frontend framework
+                // sh 'npm run build'
             }
         }
-        
-        stage('Simple Test') {
+
+        stage('Deploy') {
             steps {
-                echo 'STEP 4: Simple test step...'
-                sh 'echo "This is a test" > test.txt'
-                sh 'cat test.txt'
+                echo 'Deploying Parkmeter project...'
+                // OPTION A: Deployment using PM2 (for local/VPS hosting)
+                sh 'pm2 restart all || pm2 start server.js --name $APP_NAME'
+
+                // OPTION B: Deployment via Docker (uncomment if using Docker)
+                // sh 'docker build -t parkmeter:latest .'
+                // sh 'docker stop parkmeter || true && docker rm parkmeter || true'
+                // sh 'docker run -d --name parkmeter -p 3000:3000 parkmeter:latest'
             }
         }
     }
-    
+
     post {
         always {
-            echo "Pipeline completed with status: ${currentBuild.result}"
+            // Clean up workspace to save disk space
+            cleanWs()
+        }
+        success {
+            echo "Successfully deployed ${env.APP_NAME} build #${env.BUILD_NUMBER}"
+        }
+        failure {
+            echo "Deployment failed! Check the console output."
         }
     }
 }
