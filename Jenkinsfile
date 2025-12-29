@@ -1,29 +1,51 @@
 pipeline {
     agent any
-
+    
     stages {
-        stage('Install') {
+        stage('Checkout') {
             steps {
-                echo 'Installing dependencies...'
-                // npm install recreates node_modules based on package.json
-                sh 'npm install'
+                echo 'STEP 1: Checking out code...'
+                checkout scm
             }
         }
-
-        stage('Build') {
+        
+        stage('List Files') {
             steps {
-                echo 'Building Vite project...'
-                // This generates the "dist" folder seen in your VS Code
-                sh 'npm run build'
+                echo 'STEP 2: Listing project files...'
+                sh '''
+                    pwd
+                    ls -la
+                    echo "Frontend files:"
+                    ls -la
+                    echo "Backend files:"
+                    ls -la server/
+                '''
             }
         }
-
-        stage('Deploy') {
+        
+        stage('Check Versions') {
             steps {
-                echo 'Deployment step...'
-                // This is where you would move files to Nginx or start a process
-                sh 'echo "Build successful. Ready for hosting."'
+                echo 'STEP 3: Checking tool versions...'
+                sh '''
+                    node --version || echo "Node not installed"
+                    npm --version || echo "NPM not installed"
+                    git --version || echo "Git not installed"
+                '''
             }
+        }
+        
+        stage('Simple Test') {
+            steps {
+                echo 'STEP 4: Simple test step...'
+                sh 'echo "This is a test" > test.txt'
+                sh 'cat test.txt'
+            }
+        }
+    }
+    
+    post {
+        always {
+            echo "Pipeline completed with status: ${currentBuild.result}"
         }
     }
 }
