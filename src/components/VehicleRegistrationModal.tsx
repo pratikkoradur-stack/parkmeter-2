@@ -37,6 +37,34 @@ export const VehicleRegistrationModal: React.FC<Props> = ({ isOpen, onClose, onS
 
   const supabaseConfigured = isSupabaseConfigured();
 
+  // Expose a small diagnostic UI so we can debug env detection in the browser
+  const viteSupabaseUrl = (import.meta.env as any).VITE_SUPABASE_URL || null;
+  const viteSupabaseAnonKey = (import.meta.env as any).VITE_SUPABASE_ANON_KEY || '';
+  const [supabaseTestResult, setSupabaseTestResult] = useState<string | null>(null);
+
+  const maskedUrl = viteSupabaseUrl ? `${viteSupabaseUrl.slice(0, 20)}...` : '—';
+
+  const testSupabase = async () => {
+    setSupabaseTestResult('Testing...');
+    if (!supabaseConfigured) {
+      setSupabaseTestResult('Supabase appears unconfigured in the client (missing/invalid VITE_SUPABASE_* env vars).');
+      return;
+    }
+
+    try {
+      const client = supabase!;
+      // A lightweight test: attempt to list 1 row from the `vehicles` table
+      const { data, error } = await client.from('vehicles').select('id').limit(1);
+      if (error) {
+        setSupabaseTestResult('Connection error: ' + error.message);
+      } else {
+        setSupabaseTestResult('Connection OK — Supabase reachable');
+      }
+    } catch (err: any) {
+      setSupabaseTestResult('Error: ' + (err?.message || String(err)));
+    }
+  };
+
   const validate = () => {
     if (!plate || plate.trim().length < 3) return 'Number plate is required';
     if (!owner || owner.trim().length < 2) return 'Owner name is required';
@@ -175,9 +203,15 @@ export const VehicleRegistrationModal: React.FC<Props> = ({ isOpen, onClose, onS
             <textarea value={notes} onChange={e => setNotes(e.target.value)} className="w-full border px-3 py-2 rounded" />
           </div>
 
-          {!supabaseConfigured && (
-            <div className="text-sm text-yellow-700 mb-2">⚠️ Supabase not configured — using local demo storage; data will only be saved locally (not persisted to Supabase).</div>
-          )}
+          <div className="mb-3 text-sm text-gray-600">
+            <div><strong>Supabase client detected:</strong> {supabaseConfigured ? 'Yes' : 'No'}</div>
+            <div><strong>Detected VITE_SUPABASE_URL (masked):</strong> <code>{maskedUrl}</code></div>
+            <div className="mt-2">
+              <button onClick={testSupabase} className="px-2 py-1 mr-2 bg-gray-200 rounded text-sm">Test Supabase</button>
+              {supabaseTestResult && <span className="text-sm ml-2">{supabaseTestResult}</span>}
+            </div>
+            {!supabaseConfigured && <div className="text-sm text-yellow-700 mt-2">⚠️ Supabase not configured — using local demo storage; data will only be saved locally (not persisted to Supabase). To use Supabase, add a <code>.env</code> file with <code>VITE_SUPABASE_URL</code> and <code>VITE_SUPABASE_ANON_KEY</code> and restart the dev server.</div>}
+          </div>
 
           {supabaseConfigured && !user && (
             <div className="text-sm text-yellow-700 mb-2">⚠️ Please sign in to save vehicles to Supabase.</div>
