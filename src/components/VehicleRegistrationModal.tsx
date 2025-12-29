@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { isSupabaseConfigured, supabase } from '../lib/supabase';
+import { isSupabaseConfigured, supabase, saveVehicleFallback } from '../lib/supabase';
 
 type Props = {
   isOpen: boolean;
@@ -49,14 +49,9 @@ export const VehicleRegistrationModal: React.FC<Props> = ({ isOpen, onClose, onS
       setError(v);
       return;
     }
-    if (!supabaseConfigured) {
-      setError('Supabase is not configured. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in your environment.');
-      return;
-    }
-
     setLoading(true);
 
-    // Prepare the data for Supabase
+    // Prepare the data for Supabase or demo fallback
     const record = {
       plate: plate.trim().toUpperCase(),
       owner: owner.trim(),
@@ -70,6 +65,15 @@ export const VehicleRegistrationModal: React.FC<Props> = ({ isOpen, onClose, onS
     };
 
     try {
+      if (!supabaseConfigured) {
+        // Demo mode: save locally and return the demo record
+        const { data, error: fallbackError } = await saveVehicleFallback(record);
+        if (fallbackError) throw fallbackError;
+        onSuccess && onSuccess(data);
+        onClose();
+        return;
+      }
+
       // Try to insert and return the inserted row
       const { data, error: supabaseError } = await supabase
         .from('vehicles')
@@ -149,14 +153,14 @@ export const VehicleRegistrationModal: React.FC<Props> = ({ isOpen, onClose, onS
           </div>
 
           {!supabaseConfigured && (
-            <div className="text-sm text-yellow-700 mb-2">⚠️ Supabase not configured. Set <code>VITE_SUPABASE_URL</code> and <code>VITE_SUPABASE_ANON_KEY</code> in your environment to persist vehicles.</div>
+            <div className="text-sm text-yellow-700 mb-2">⚠️ Supabase not configured — using local demo storage; data will only be saved locally (not persisted to Supabase).</div>
           )}
 
           {error && <div className="text-sm text-red-600">{error}</div>}
 
           <div className="flex justify-end space-x-2">
             <button onClick={onClose} className="px-3 py-2 bg-gray-200 rounded">Cancel</button>
-            <button onClick={save} disabled={loading || !supabaseConfigured} className="px-3 py-2 bg-blue-600 text-white rounded">{loading ? 'Saving...' : 'Register Vehicle'}</button>
+            <button onClick={save} disabled={loading} className="px-3 py-2 bg-blue-600 text-white rounded">{loading ? 'Saving...' : (supabaseConfigured ? 'Register Vehicle' : 'Register (Demo)')}</button>
           </div>
         </div>
       </div>
