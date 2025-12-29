@@ -1,66 +1,51 @@
 pipeline {
     agent any
     
-    environment {
-        NODE_ENV = 'production'
-        // Remove credentials for now, add them later
-        // VITE_SUPABASE_URL = credentials('supabase-url')
-        // VITE_SUPABASE_ANON_KEY = credentials('supabase-key')
-    }
-    
     stages {
         stage('Checkout') {
             steps {
+                echo 'STEP 1: Checking out code...'
                 checkout scm
-                sh 'echo "📦 Repository cloned successfully"'
-                sh 'git log --oneline -1'
             }
         }
         
-        stage('Install Dependencies') {
+        stage('List Files') {
             steps {
+                echo 'STEP 2: Listing project files...'
                 sh '''
-                    echo "📦 Installing frontend dependencies..."
-                    npm install || echo "Frontend install completed"
-                    
-                    echo "📦 Installing backend dependencies..."
-                    cd server && npm install || echo "Backend install completed"
+                    pwd
+                    ls -la
+                    echo "Frontend files:"
+                    ls -la
+                    echo "Backend files:"
+                    ls -la server/
                 '''
             }
         }
         
-        stage('Build Application') {
+        stage('Check Versions') {
             steps {
+                echo 'STEP 3: Checking tool versions...'
                 sh '''
-                    echo "🔨 Building frontend..."
-                    npm run build || echo "Build completed"
-                    
-                    echo "📁 Build output:"
-                    ls -la dist/ 2>/dev/null || echo "No dist folder"
+                    node --version || echo "Node not installed"
+                    npm --version || echo "NPM not installed"
+                    git --version || echo "Git not installed"
                 '''
             }
         }
         
-        stage('Run Tests') {
+        stage('Simple Test') {
             steps {
-                sh '''
-                    echo "🧪 Running tests..."
-                    npm test -- --watchAll=false 2>/dev/null || echo "Tests completed"
-                '''
+                echo 'STEP 4: Simple test step...'
+                sh 'echo "This is a test" > test.txt'
+                sh 'cat test.txt'
             }
         }
     }
     
     post {
         always {
-            echo "🏁 Pipeline ${currentBuild.currentResult}!"
-            echo "🔗 Build URL: ${BUILD_URL}"
-        }
-        success {
-            echo "✅ SUCCESS! Build completed!"
-        }
-        failure {
-            echo "❌ FAILURE! Check logs for errors."
+            echo "Pipeline completed with status: ${currentBuild.result}"
         }
     }
 }
