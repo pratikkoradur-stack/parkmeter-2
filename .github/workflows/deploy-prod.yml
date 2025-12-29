@@ -1,40 +1,38 @@
-name: Deploy to EC2 🚀
+name: Deploy to Production
 
 on:
   push:
-    branches:
-      - main
+    branches: ["main"]
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
+      - name: Install SSH client
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y openssh-client
 
-      - name: Setup SSH
+      - name: Setup SSH keys
         run: |
           mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-          echo "${{ secrets.SSH_KNOWN_HOST }}" > ~/.ssh/known_hosts
+          echo "${{ secrets.SSH_KNOWN_HOSTS }}" > ~/.ssh/known_hosts
+          chmod 644 ~/.ssh/known_hosts
 
-      - name: Deploy to EC2
+      - name: Test SSH Connection
+        run: ssh -v -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_HOST }} "echo 'Connection successful'"
+
+      - name: Deploy to EC2 instance
         run: |
-          ssh ubuntu@${{ secrets.EC2_HOST }} << 'EOF'
-          cd /home/ubuntu
-
-          # Clone project if not exists
-          if [ ! -d "parkmeter-server" ]; then
-            git clone https://github.com/pratikkoradur-stack/parkmeter-2.git parkmeter-server
-          fi
-
-          cd parkmeter-server
-
+          ssh -o StrictHostKeyChecking=no ubuntu@${{ secrets.EC2_HOST }} << 'EOF'
+          export NVM_DIR="$HOME/.nvm"
+          [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+          nvm use 22.12.0
+          cd ~/github-pipeline-ts
           git pull origin main
-          npm install
-
-          pm2 restart parkmeter || pm2 start index.js --name parkmeter
-          pm2 save
+          pm2 restart github-pipeline-test
           EOF
