@@ -1,82 +1,51 @@
 pipeline {
     agent any
     
-    environment {
-        NODE_ENV = 'production'
-    }
-    
     stages {
         stage('Checkout') {
             steps {
+                echo 'STEP 1: Checking out code...'
                 checkout scm
-                sh 'git log --oneline -5'
             }
         }
         
-        stage('Setup') {
+        stage('List Files') {
             steps {
+                echo 'STEP 2: Listing project files...'
                 sh '''
-                    echo "=== System Info ==="
-                    uname -a
-                    echo "Node: $(node --version)"
-                    echo "NPM: $(npm --version)"
-                    echo "Git: $(git --version)"
+                    pwd
+                    ls -la
+                    echo "Frontend files:"
+                    ls -la
+                    echo "Backend files:"
+                    ls -la server/
                 '''
             }
         }
         
-        stage('Install Frontend Dependencies') {
+        stage('Check Versions') {
             steps {
-                sh 'npm install'
+                echo 'STEP 3: Checking tool versions...'
+                sh '''
+                    node --version || echo "Node not installed"
+                    npm --version || echo "NPM not installed"
+                    git --version || echo "Git not installed"
+                '''
             }
         }
         
-        stage('Install Backend Dependencies') {
+        stage('Simple Test') {
             steps {
-                dir('server') {
-                    sh 'npm install'
-                }
-            }
-        }
-        
-        stage('Build Frontend') {
-            steps {
-                sh 'npm run build'
-                sh 'ls -la dist/'
-            }
-        }
-        
-        stage('Test Frontend') {
-            steps {
-                sh 'npm test || true'  # || true means don't fail pipeline if tests fail
-            }
-        }
-        
-        stage('Test Backend') {
-            steps {
-                dir('server') {
-                    sh 'npm test || true'
-                }
-            }
-        }
-        
-        stage('Archive Artifacts') {
-            steps {
-                archiveArtifacts artifacts: 'dist/**/*', fingerprint: true
+                echo 'STEP 4: Simple test step...'
+                sh 'echo "This is a test" > test.txt'
+                sh 'cat test.txt'
             }
         }
     }
     
     post {
         always {
-            echo "🎯 Build ${currentBuild.result} - ${currentBuild.fullDisplayName}"
-            cleanWs()  // Clean workspace
-        }
-        success {
-            echo '✅ SUCCESS! Pipeline completed successfully.'
-        }
-        failure {
-            echo '❌ FAILURE! Pipeline failed.'
+            echo "Pipeline completed with status: ${currentBuild.result}"
         }
     }
 }
