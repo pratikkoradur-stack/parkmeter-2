@@ -83,12 +83,12 @@ export const getCurrentUser = async () => {
  */
 export const saveVehicleFallback = async (record: any) => {
   try {
-    const raw = localStorage.getItem('demo_vehicles') || '[]';
+    const raw = localStorage.getItem('vehicles') || '[]';
     const list = JSON.parse(raw);
     const id = Date.now();
     const newRec = { id, ...record };
     list.push(newRec);
-    localStorage.setItem('demo_vehicles', JSON.stringify(list));
+    localStorage.setItem('vehicles', JSON.stringify(list));
     return { data: newRec, error: null };
   } catch (err: any) {
     return { data: null, error: { message: 'Failed to save vehicle locally' } };

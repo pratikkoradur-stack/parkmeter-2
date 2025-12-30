@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { isSupabaseConfigured, supabase, saveVehicleFallback } from '../lib/supabase';
+import { useAuth } from '../contexts/AuthContext';
 
 type Props = {
   isOpen: boolean;
@@ -42,6 +43,9 @@ export const VehicleRegistrationModal: React.FC<Props> = ({ isOpen, onClose, onS
     return null;
   };
 
+  // Access authenticated user from context
+  const { user } = useAuth();
+
   const save = async () => {
     setError(null);
     const v = validate();
@@ -51,8 +55,8 @@ export const VehicleRegistrationModal: React.FC<Props> = ({ isOpen, onClose, onS
     }
     setLoading(true);
 
-    // Prepare the data for Supabase or demo fallback
-    const record = {
+    // Demo/fallback record (keeps all input fields for local demo storage)
+    const demoRecord = {
       plate: plate.trim().toUpperCase(),
       owner: owner.trim(),
       model: model.trim(),
@@ -60,24 +64,36 @@ export const VehicleRegistrationModal: React.FC<Props> = ({ isOpen, onClose, onS
       type,
       contact: contact.trim(),
       notes: notes.trim(),
-      // Supabase will handle created_at automatically, or we can send it
       created_at: new Date().toISOString()
     };
 
     try {
       if (!supabaseConfigured) {
         // Demo mode: save locally and return the demo record
-        const { data, error: fallbackError } = await saveVehicleFallback(record);
+        const { data, error: fallbackError } = await saveVehicleFallback(demoRecord);
         if (fallbackError) throw fallbackError;
         onSuccess && onSuccess(data);
         onClose();
         return;
       }
 
-      // Try to insert and return the inserted row
-      const { data, error: supabaseError } = await supabase
+      // Supabase is configured: require a signed-in user so we can attach the vehicle
+      if (!user || !user.id) {
+        setError('You must be signed in to register a vehicle.');
+        return;
+      }
+
+      // Map local input to DB columns expected by the `vehicles` table
+      const dbRecord: any = {
+        user_id: user.id,
+        license_plate: plate.trim().toUpperCase(),
+        model: model.trim(),
+        color: color.trim()
+      };
+
+      const { data, error: supabaseError } = await supabase!
         .from('vehicles')
-        .insert([record])
+        .insert([dbRecord])
         .select()
         .single();
 
@@ -93,7 +109,14 @@ export const VehicleRegistrationModal: React.FC<Props> = ({ isOpen, onClose, onS
       if (err instanceof TypeError && err.message && err.message.toLowerCase().includes('failed to fetch')) {
         setError('Network error: Unable to reach Supabase. Check your VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY and that the Supabase project allows your app origin.');
       } else if (err?.message) {
-        setError(err.message);
+        const msg = err.message.toLowerCase();
+        if (msg.includes('license_plate') || (msg.includes('null value') && msg.includes('license_plate'))) {
+          setError('Server error: Missing or invalid number plate. Please ensure the plate is provided.');
+        } else if (msg.includes('user_id')) {
+          setError('Server error: Unable to attach vehicle to your account. Please sign in and try again.');
+        } else {
+          setError(err.message);
+        }
       } else {
         setError('Failed to save vehicle');
       }
@@ -156,11 +179,15 @@ export const VehicleRegistrationModal: React.FC<Props> = ({ isOpen, onClose, onS
             <div className="text-sm text-yellow-700 mb-2">⚠️ Supabase not configured — using local demo storage; data will only be saved locally (not persisted to Supabase).</div>
           )}
 
+          {supabaseConfigured && !user && (
+            <div className="text-sm text-yellow-700 mb-2">⚠️ Please sign in to save vehicles to Supabase.</div>
+          )}
+
           {error && <div className="text-sm text-red-600">{error}</div>}
 
           <div className="flex justify-end space-x-2">
             <button onClick={onClose} className="px-3 py-2 bg-gray-200 rounded">Cancel</button>
-            <button onClick={save} disabled={loading} className="px-3 py-2 bg-blue-600 text-white rounded">{loading ? 'Saving...' : (supabaseConfigured ? 'Register Vehicle' : 'Register (Demo)')}</button>
+            <button onClick={save} disabled={loading || (supabaseConfigured && !user)} className="px-3 py-2 bg-blue-600 text-white rounded">{loading ? 'Saving...' : (supabaseConfigured ? (user ? 'Register Vehicle' : 'Sign in to Register') : 'Register (Demo)')}</button>
           </div>
         </div>
       </div>
